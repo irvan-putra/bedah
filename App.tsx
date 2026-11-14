@@ -944,7 +944,7 @@ function Canvas() {
     // the reading sheet is the ONLY card reader now (no in-map clickables),
     // so it opens at every viewport width, not just phones
     const overlayId = focusedId;
-    const sheetOpen = sheetGroup !== null && evp.w < 560;
+    const sheetOpen = sheetGroup !== null;
     useEffect(() => {
         if (!overlayId && !sheetOpen) return;
         const prev = document.body.style.overflow;
