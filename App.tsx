@@ -1411,7 +1411,7 @@ const compTileSize = (gid: string, n: number) => {
     // visibility only, never territory).
     const groupLayout: GroupNode[] = [
         ...frameNodes,
-        nodeP('p-owner', 0.31, 0.13), nodeP('p-visitor', 0.66, 0.13),
+        nodeP('p-owner', 0.31, 0.07), nodeP('p-visitor', 0.66, 0.07),
         nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
     ];
     // System band (c4model.com sample as reference):
@@ -1420,7 +1420,7 @@ const compTileSize = (gid: string, n: number) => {
     // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
         { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: layRect.x + 0.44 * layRect.w, y: layRect.y + 0.50 * layRect.h, hw: layRect.w * 0.24, hh: layRect.h * 0.35 },
-        nodeP('p-owner', 0.31, 0.13), nodeP('p-visitor', 0.66, 0.13),
+        nodeP('p-owner', 0.31, 0.07), nodeP('p-visitor', 0.66, 0.07),
         nodeX('x-intodo', 0.06, 0.52),
         nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
     ];
@@ -1441,13 +1441,14 @@ const compTileSize = (gid: string, n: number) => {
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
         'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
-        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1650, 430], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
+        'p-visitor-c-app': { pts: [[2099, 320], [2099, 380], [1400, 380], [1400, 560]], pill: [1740, 380], lines: ['reads + marks', '(localStorage only)'], hw: 170 },
         'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
-        // People edges carry no pills: the people slots sit directly above
-        // the system boundary, so a world-sized pill only fits there on
-        // wide screens; the line stays and the docked key names the relation.
-        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1110, 430], lines: [], hw: 0, hh: 0 },
-        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: [], hw: 0, hh: 0 },
+        // People edges ride the gutter opened above the system boundary
+        // (people row raised to fy 0.07): each pill sits on its own
+        // connector, world-sized like the other authored pills, so it reads
+        // at reading zoom and declutters Maps-style at the far band.
+        'p-owner-s-vana': { pts: [[1007, 320], [1007, 508]], pill: [1007, 420], lines: ['writes +', 'reviews'], hw: 130 },
+        'p-visitor-s-vana': { pts: [[2099, 320], [2099, 508]], pill: [2099, 420], lines: ['reads + marks', '(local only)'], hw: 190 },
     };
     // Endpoint snap: external/person node boxes are content-sized with
     // counter-scaled (screen-constant) label text, so their top/bottom
@@ -1485,7 +1486,7 @@ const compTileSize = (gid: string, n: number) => {
     const grpFar = cam.z < 0.28;
     const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
-        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar || a.lines.length === 0, auth: true, plain: (rel as C4Rel).plain };
+        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar, auth: true, plain: (rel as C4Rel).plain };
     });
     // Flyover crossings: where two authored routes cross, the later-drawn
     // edge arcs over the earlier one (circuit-diagram flyover). Crossings
