@@ -740,15 +740,18 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-cm-jb rect, .rc-cm-st rect { fill: #e9f4ec; stroke: #86b394; }
 .rc-cm-hd rect, .rc-cm-dp rect { fill: #f6f0e4; stroke: #c4aa73; }
 .rc-cm-edge { stroke: #7d8fa3; stroke-width: .25; opacity: .55; }
+.rc-cm-file { stroke: #3d6a99; stroke-width: calc(1.2px / var(--camz)); opacity: .7; fill: none; }
+.rc-cm-filelab { fill: #2c5a8a; font-family: ui-monospace, Menlo, monospace; paint-order: stroke; stroke: #fff; stroke-width: calc(2.5px / var(--camz)); stroke-linejoin: round; }
+.rc-trail-faded polyline { opacity: .12; }
 .rc-cm-edge-imp { stroke: #c2601f; stroke-dasharray: 1 .6; opacity: .8; }
 .rc-ce polyline { stroke: #2f6bab; stroke-width: calc(1.5px / var(--camz)); }
-.rc-ce text { fill: #2f6bab; paint-order: stroke; stroke: #fff; stroke-width: 3px; font-family: inherit; }
+.rc-ce text { fill: #2f6bab; paint-order: stroke; stroke: #fff; stroke-width: calc(2.5px / var(--camz)); stroke-linejoin: round; font-family: inherit; }
 .rc-cm-k-calls { stroke: #1f5fa8; opacity: .85; stroke-width: .35; }
 .rc-cm-k-type { stroke: #8a73b0; opacity: .4; }
 .rc-cm-k-renders { stroke: #2e8b57; opacity: .8; }
 .rc-trail polyline { stroke: #b8860b; stroke-width: calc(1px / var(--camz)); stroke-dasharray: 4 3; opacity: .35; fill: none; }
 .rc-trail-on polyline { stroke-width: calc(2.2px / var(--camz)); opacity: .95; stroke-dasharray: none; }
-.rc-trail text { fill: #7a5a06; font-family: inherit; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.rc-trail text { fill: #7a5a06; font-family: inherit; paint-order: stroke; stroke: #fff; stroke-width: calc(2.5px / var(--camz)); stroke-linejoin: round; }
 .rc-zone { fill: #6b6f6e; font-style: italic; font-family: inherit; }
 .rc-menu-note { font-size: 12px; opacity: .85; }
 .rc-menu-note span { opacity: .7; }

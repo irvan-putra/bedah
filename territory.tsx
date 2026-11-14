@@ -147,7 +147,7 @@ const KIND_CLASS: Record<string, string> = { function: 'fn', 'inner function': '
 // font size that stays screen-constant (counter-scaled) but never exceeds fit
 const csFont = (screenPx: number, capWorld: number) => `min(calc(${screenPx}px / var(--camz)), ${capWorld}px)`;
 
-export const Territory = React.memo(function Territory({ tiles, zq, edges, trails, trail, tags }: { tiles: Record<string, TileGeo>; zq: number; edges: CompEdge[]; trails: Trail[]; trail: string; tags: ZoneTag[] }) {
+export const Territory = React.memo(function Territory({ tiles, zq, edges, trails, trail, tags, edgeMode, edgeFile }: { edgeMode: 'files' | 'file' | 'all' | 'off'; edgeFile: string | null; tiles: Record<string, TileGeo>; zq: number; edges: CompEdge[]; trails: Trail[]; trail: string; tags: ZoneTag[] }) {
     const decl = new Map<string, Rect>();
     for (const t of Object.values(tiles)) for (const r of t.rooms) for (const c of r.chips) decl.set(c.d.id, c.r);
     const fileRect = new Map<string, Rect>();
@@ -155,14 +155,41 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
     const showResp = zq >= 0.8, showRooms = zq >= 1.4, showChipText = zq >= 3.0, showEdges = zq >= 2.2;
     const cx = (r: Rect) => r.x + r.w / 2, cy = (r: Rect) => r.y + r.h / 2;
     const edgeLines: React.ReactNode[] = [];
-    if (showEdges) {
+    const fileOf = (id: string) => id.replace(/^file:/, '').split('#')[0];
+    if (showEdges && edgeMode !== 'off') {
         let i = 0;
-        for (const e of CM_EDGES) {
-            if (!e.kind.endsWith('-resolved') && e.kind !== 'same-file-name' && e.kind !== 'imported-name') continue;
-            const a = decl.get(e.a);
-            const b = decl.get(e.b) ?? fileRect.get(e.b);
-            if (!a || !b) continue;
-            edgeLines.push(<line key={i++} x1={cx(a)} y1={cy(a)} x2={cx(b)} y2={cy(b)} className={`rc-cm-edge rc-cm-k-${e.kind.replace('-resolved', '')}${a.x + 200 < b.x || b.x + 200 < a.x ? ' rc-cm-edge-imp' : ''}`} />);
+        if (edgeMode === 'files') {
+            // one line per ordered file pair; the count is how many declaration edges it stands for
+            const agg = new Map<string, { a: Rect; b: Rect; n: number; fa: string; fb: string }>();
+            for (const e of CM_EDGES) {
+                if (!e.kind.endsWith('-resolved') && e.kind !== 'same-file-name' && e.kind !== 'imported-name') continue;
+                const fa = fileOf(e.a), fb = fileOf(e.b);
+                if (fa === fb) continue;
+                const a = fileRect.get('file:' + fa), b = fileRect.get('file:' + fb);
+                if (!a || !b) continue;
+                const k = fa + '>' + fb; const g = agg.get(k);
+                if (g) g.n++; else agg.set(k, { a, b, n: 1, fa, fb });
+            }
+            for (const g of agg.values()) {
+                // start and end on each room's border (toward the other room), not at its center
+                const edge = (r: Rect, tx: number, ty: number): [number, number] => {
+                    const ccx = r.x + r.w / 2, ccy = r.y + r.h / 2, dx = tx - ccx, dy = ty - ccy;
+                    const s = Math.min(dx ? (r.w / 2) / Math.abs(dx) : Infinity, dy ? (r.h / 2) / Math.abs(dy) : Infinity, 1);
+                    return [ccx + dx * s, ccy + dy * s];
+                };
+                const [x1, y1] = edge(g.a, g.b.x + g.b.w / 2, g.b.y + g.b.h / 2);
+                const [x2, y2] = edge(g.b, g.a.x + g.a.w / 2, g.a.y + g.a.h / 2);
+                edgeLines.push(<g key={i++}><line x1={x1} y1={y1} x2={x2} y2={y2} className="rc-cm-file" /><text x={(x1 + x2) / 2} y={(y1 + y2) / 2} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
+            }
+        } else {
+            for (const e of CM_EDGES) {
+                if (!e.kind.endsWith('-resolved') && e.kind !== 'same-file-name' && e.kind !== 'imported-name') continue;
+                if (edgeMode === 'file' && fileOf(e.a) !== edgeFile && fileOf(e.b) !== edgeFile) continue;
+                const a = decl.get(e.a);
+                const b = decl.get(e.b) ?? fileRect.get(e.b);
+                if (!a || !b) continue;
+                edgeLines.push(<line key={i++} x1={cx(a)} y1={cy(a)} x2={cx(b)} y2={cy(b)} className={`rc-cm-edge rc-cm-k-${e.kind.replace('-resolved', '')}${a.x + 200 < b.x || b.x + 200 < a.x ? ' rc-cm-edge-imp' : ''}`} />);
+            }
         }
     }
     const compEdges = zq >= 0.42 ? edges.map((e) => (
@@ -204,7 +231,7 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
             {edgeLines}
             {compEdges}
             {zq >= 0.42 ? trails.map((tr) => (
-                <g key={tr.id} className={`rc-trail${trail === tr.id ? ' rc-trail-on' : ''}`}>
+                <g key={tr.id} className={`rc-trail${trail === tr.id ? ' rc-trail-on' : zq >= 2.2 ? ' rc-trail-faded' : ''}`}>
                     {tr.steps.map((s, i) => (
                         <g key={i}>
                             <polyline points={s.pts.map((p) => p.join(',')).join(' ')} fill="none" markerEnd="url(#rc-tr-arr)" />

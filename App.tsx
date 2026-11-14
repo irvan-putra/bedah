@@ -708,6 +708,8 @@ function Canvas() {
     const [dock, setDock] = useState<'none' | 'menu' | 'legend'>('none');
     // one canvas: the old whole-canvas view switches are gone
     const [trail, setTrail] = useState<'none' | 'ship' | 'refresh'>('none');
+    const [edgeMode, setEdgeMode] = useState<'files' | 'file' | 'all' | 'off'>('files');
+    const [edgeFile, setEdgeFile] = useState<string | null>(null);
     const [menuComp, setMenuComp] = useState<string | null>(null);
     const [measuredNodes, setMeasuredNodes] = useState<Record<string, { w: number; h: number }>>({});
     // Live container-band external/person node boxes (world units): their
@@ -1583,7 +1585,7 @@ function Canvas() {
                 ))}
                 {(
                     <svg className="rc-terr" width={2040} height={620} viewBox="730 530 2040 620" style={{ left: 730, top: 530 }}>
-                        <Territory tiles={TERR_TILES} zq={zq} edges={TERR_EDGES} trails={TERR_TRAILS} trail={trail} tags={TERR_TAGS} />
+                        <Territory tiles={TERR_TILES} zq={zq} edges={TERR_EDGES} trails={TERR_TRAILS} trail={trail} tags={TERR_TAGS} edgeMode={edgeMode} edgeFile={edgeFile} />
                     </svg>
                 )}
                 {/* container-band edges + authored label pills render last so
@@ -1667,6 +1669,20 @@ function Canvas() {
                         <button key={id} type="button" className={`rc-menu-btn${trail === id ? ' rc-menu-on' : ''}`} onClick={() => setTrail(id)}>{lab}</button>
                     ))}
                 </div>
+                <span className="rc-menu-head">Code edges (shown from zoom 2.2; all stay in the data)</span>
+                <div className="rc-menu-row">
+                    {([['files', 'File to file (default)'], ['file', 'One file'], ['all', 'Every declaration'], ['off', 'Hide']] as const).map(([id, lab]) => (
+                        <button key={id} type="button" className={`rc-menu-btn${edgeMode === id ? ' rc-menu-on' : ''}`} onClick={() => { setEdgeMode(id); if (id === 'file' && !edgeFile) setEdgeFile(CM_FILES.find((f) => f.decls > 0)?.path ?? null); }}>{lab}</button>
+                    ))}
+                </div>
+                {edgeMode === 'file' ? (
+                    <div className="rc-menu-row">
+                        {CM_FILES.filter((f) => f.decls > 0).map((f) => (
+                            <button key={f.path} type="button" className={`rc-menu-btn${edgeFile === f.path ? ' rc-menu-on' : ''}`} onClick={() => setEdgeFile(f.path)}>{f.path.split('/').pop()}</button>
+                        ))}
+                    </div>
+                ) : null}
+                <p className="rc-menu-note">Now showing: {edgeMode === 'files' ? 'one line per file pair, the number is the declaration edges it stands for' : edgeMode === 'file' ? `every declaration edge touching ${edgeFile}` : edgeMode === 'all' ? 'every declaration edge (dense)' : 'no code edges drawn'}. Trails are faded above zoom 2.2 unless chosen.</p>
                 <span className="rc-menu-head">Components</span>
                 <div className="rc-menu-row">
                     {COMPONENTS.map((cp) => (
