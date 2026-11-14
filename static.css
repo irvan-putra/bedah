@@ -223,9 +223,11 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-groups .rc-grpnode, .rc-sysnodes .rc-grpnode { pointer-events: auto; }
 .rc-glabels, .rc-syslabels { display: none; }
 .rc-grp .rc-glabels { display: block; }
-/* System band stays sparse: no numbered badges
-   there - stub edges converge on the marker cluster and badges pile up;
-   numbering returns at the container band, the key lists every relation. */
+/* System band relationships carry short text pills (screen-constant,
+   decluttered Maps-style): unlabeled hairlines read as noise on a phone.
+   A pill hidden by the declutter pass keeps its edge line, and every
+   relation stays listed in the docked key. */
+.rc-sys .rc-syslabels { display: block; }
 .rc-grp .rc-gedges > path {
     stroke: var(--ds-teal);
     stroke-width: calc(1.8px / var(--camz));
@@ -272,6 +274,9 @@ a, .rc-card a { color: var(--ds-ink); }
     cursor: pointer;
 }
 .rc-dockchip-on { border-color: var(--ds-teal); color: var(--ds-ink); }
+/* C1-C4 camera shortcuts: a compact group inside the dock bar. */
+.rc-c4jump { display: inline-flex; gap: 4px; }
+.rc-c4jump .rc-dockchip { padding: 5px 9px; }
 .rc-menu {
     display: flex; flex-direction: column; gap: 6px;
     padding: 8px 14px;
@@ -326,8 +331,8 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-sysedges { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
 .rc-sys .rc-sysedges polyline {
     stroke: var(--ds-teal);
-    stroke-width: calc(2.5px / var(--camz));
-    opacity: 0.55;
+    stroke-width: calc(3px / var(--camz));
+    opacity: 0.72;
 }
 .rc-sysedges polyline.rc-rel-dash {
     stroke: var(--ds-ink-2);
@@ -425,12 +430,14 @@ a, .rc-card a { color: var(--ds-ink); }
    and every relation stays listed in the docked key).
    - Container band, z<0.16: node sub-labels and kind tags (the renderer
      also swaps label pills for edge-only lines there).
-   - System band, z<0.12: sub-labels and the system boundary label. */
+   - System band, z<0.12: sub-labels and the boundary kind chip. The system
+     NAME stays: an unnamed boundary made the whole view unreadable
+     (owner screenshot, 15 Nov). */
 .rc-grp.rc-far .rc-grpcount, .rc-grp.rc-far .rc-kindtag,
 .rc-grp.rc-far .rc-personicon,
 .rc-grp.rc-far .rc-frame-sub, .rc-grp.rc-far .rc-frame-kind { display: none; }
-.rc-sys.rc-sysfar .rc-grpcount, .rc-sys.rc-sysfar .rc-node-boundary .rc-grplabel,
-.rc-sys.rc-sysfar .rc-node-boundary .rc-grpcount { display: none; }
+.rc-sys.rc-sysfar .rc-grpcount, .rc-sys.rc-sysfar .rc-node-boundary .rc-grpcount,
+.rc-sys.rc-sysfar .rc-node-boundary .rc-kindtag { display: none; }
 .rc-node-system {
     background: var(--c4-system-tint);
     border-color: var(--c4-system);
@@ -658,8 +665,10 @@ a, .rc-card a { color: var(--ds-ink); }
    kinds stay cued by color/border/shape and the docked key's legend. The
    boundary keeps its C4 block (name, description, kind tag) in the top
    strip, clear of the frames. */
-.rc-sys .rc-grpnode .rc-grplabel { font-size: max(34px, min(calc(12px / var(--camz)), 110px)); }
-.rc-sys .rc-node-boundary .rc-grplabel { background: transparent; padding: 0; }
+.rc-sys .rc-grpnode .rc-grplabel { font-size: max(34px, min(calc(14px / var(--camz)), 150px)); }
+/* The system name carries the boundary: bigger than people/external labels
+   (C4 System Context style; owner found it tiny on an otherwise blank box). */
+.rc-sys .rc-node-boundary .rc-grplabel { background: transparent; padding: 0; font-size: max(40px, min(calc(18px / var(--camz)), 190px)); }
 .rc-sys .rc-node-boundary .rc-grpcount { display: block; font-size: 34px; }
 .rc-sys .rc-node-boundary .rc-kindtag { display: inline-block; font-size: 30px; }
 .rc-node-boundary { border-style: dashed; border-color: var(--c4-system); background: transparent; }
