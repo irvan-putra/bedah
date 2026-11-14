@@ -1419,7 +1419,7 @@ const compTileSize = (gid: string, n: number) => {
     // same world rect at the system, container and section bands; only what
     // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
-        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: layRect.x + 0.44 * layRect.w, y: layRect.y + 0.52 * layRect.h, hw: layRect.w * 0.24, hh: layRect.h * 0.33 },
+        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: layRect.x + 0.44 * layRect.w, y: layRect.y + 0.50 * layRect.h, hw: layRect.w * 0.24, hh: layRect.h * 0.35 },
         nodeP('p-owner', 0.31, 0.13), nodeP('p-visitor', 0.66, 0.13),
         nodeX('x-intodo', 0.06, 0.52),
         nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
@@ -1480,9 +1480,9 @@ const compTileSize = (gid: string, n: number) => {
     // pile onto the GitHub pair, so they stay in the docked key until the
     // map is zoomed in enough to read them.
     const grpFar = cam.z < 0.2;
-    const grpRels: RelGeom[] = grpFar ? [] : [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
+    const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
-        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: false, auth: true, plain: (rel as C4Rel).plain };
+        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar, auth: true, plain: (rel as C4Rel).plain };
     });
     // Flyover crossings: where two authored routes cross, the later-drawn
     // edge arcs over the earlier one (circuit-diagram flyover). Crossings
