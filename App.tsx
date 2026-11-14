@@ -261,7 +261,7 @@ function segHitsNode(p: Pos, q: Pos, n: GroupNode, m: number): boolean {
     return clip(-dx, p.x - x0) && clip(dx, x1 - p.x) && clip(-dy, p.y - y0) && clip(dy, y1 - p.y) && t0 < t1;
 }
 function routeRels(rels: C4Rel[], nodes: GroupNode[], z: number, rect: Rect, textLabels = false, avoid: GroupNode[] = []): RelGeom[] {
-    const M = 4 / z, CELL = 4 / z, RB = 11 / z;
+    const M = 4 / z, CELL = 4 / Math.min(z, 0.5), RB = 11 / z;
     // text-label pill half-size (world px): labels wrap to short lines so
     // pills stay compact and near their edge; ~0.6em per char at the 10px
     // screen-constant font plus padding; matches the CSS pill
