@@ -1,9 +1,10 @@
-# vana - intodo review canvas
+# vana - self-review canvas
 
-The full-screen review canvas for [irvan-putra/intodo](https://github.com/irvan-putra/intodo),
-extracted into its own repository so the canvas itself can be reviewed and
-developed with minimum scope. This repo holds only the canvas, its generated
-content, and its publish pipeline - no app code.
+A full-screen review canvas that reviews its own repository. The cards,
+diagrams and code facts on the page describe this repo's source at the
+pinned commit, so the page is both the review surface and the thing under
+review. Extracted from the intodo review canvas, which keeps its own
+unchanged page at <https://vanipy.com/intodo/review/>.
 
 Live at <https://vanipy.com/vana/>.
 
@@ -17,43 +18,45 @@ Live at <https://vanipy.com/vana/>.
   containers, sections, components and code - no layer jumps. Cards are
   fixed in place; review marks and camera position stay in the visitor's
   browser only (localStorage), nothing is sent anywhere.
-- Relationship lines labeled as references come from a static name scan at
-  the pinned commit, not proven runtime calls; dashed lines mark design
-  similarity or designed-but-never-deployed pieces (see the in-page legend).
+- Relationship lines labeled as references come from a static name/import
+  scan at the pinned commit, not proven runtime calls; dashed lines mark
+  one-time history (the intodo extraction), not a live link.
 
 ## Content and honesty
 
-The cards describe the intodo repository and are generated from it:
+The cards describe this repository and are generated from it:
 
-- `src/sections.ts` - 20 review sections, pinned at intodo commit `fbd0213`.
-- `src/code.ts` - C4 component and code layers (22 components, 27
-  references, 72 files), pinned at intodo commit `1f6ba2f`.
+- `src/sections.ts` - the review sections (file inventory, line counts,
+  per-section digests).
+- `src/code.ts` - the C4 component and code layers (components, curated
+  responsibilities, declarations, static references).
 
-The pins are shown in the UI, so the cards never claim to describe a newer
-intodo than they do. To refresh the content after intodo changes:
+Both carry the commit they were generated from, shown in the UI, so the
+cards never claim to describe a newer vana than they do. The generated
+files are excluded from their own digests - a self-referential content hash
+can never stabilise. To refresh the content after the source changes:
 
-    python3 tools/gen_sections.py --repo /path/to/intodo --out src/sections.ts
-    python3 tools/gen_code.py    --repo /path/to/intodo --out src/code.ts
+    python3 tools/gen_sections.py --repo /path/to/vana --out src/sections.ts
+    python3 tools/gen_code.py    --repo /path/to/vana --out src/code.ts
 
-Both generators take any local intodo checkout (`--commit` / `--from-git`
+Both generators take any local vana checkout (`--commit` / `--from-git`
 for exact pinning) and change nothing else in this repo.
 
 ## Build and deploy
 
     sh build.sh          # writes dist/: index.html + fingerprinted assets
 
-Every push to `main` that touches the canvas deploys automatically through
+Every push to `main` deploys automatically through
 `.github/workflows/deploy.yml`: an unprivileged build job (`contents: read`
 only, locked `npm ci --ignore-scripts`, esbuild) produces the artifact, then
 the only privileged job (`pages: write`, `id-token: write`, github-pages
 environment) deploys it and polls the live URL until it serves the exact
-built bytes. A green check means live, not just pushed.
+built bytes (`tools/verify_live.sh`). A green check means live, not just
+pushed.
 
 ## Not in this repo
 
-- The Android app (itdapk), the DeltaChat mini-app (itdxdc), the feed
-  encryption tools, and the native Android canvas view all stay in
-  [irvan-putra/intodo](https://github.com/irvan-putra/intodo). The native
-  canvas is a separate implementation embedded in the app build.
-- The previous URL <https://vanipy.com/intodo/review/> keeps serving from
-  the intodo repository, unchanged.
+- The intodo applications (Android app, DeltaChat mini-app, feed tools, the
+  native Android canvas view) stay in
+  [irvan-putra/intodo](https://github.com/irvan-putra/intodo). This repo
+  holds only the canvas, its generated content, and its publish pipeline.

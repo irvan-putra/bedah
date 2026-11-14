@@ -11,7 +11,7 @@ type Saved = { cam: Cam; pos: Record<string, Pos>; reviews?: Record<string, Mark
 const WORLD = { w: 3200, h: 3200 };
 const ZMIN = 0.07, ZMAX = 2.5;
 // Zoom bands, C4-style progressive disclosure (c4model.com):
-//   z < SYS_Z    system context: people + the intodo system + external systems
+//   z < SYS_Z    system context: people + the vana system + external systems
 //   z < GROUP_Z  container level: the repo's runnable units + code-evidenced
 //                relationships; tap a container to open its sections
 //   z < COMP_Z   component level: bounded component overview tiles (fixed
@@ -63,42 +63,24 @@ const COL_X = [20, 460, 900, 1340, 1780];
 // 500px pitch: tallest measured card is 472px, so rows never overlap unexpanded
 const ROW_Y = [40, 540, 1040, 1540, 2040];
 const DEFAULT_POS: Record<string, Pos> = {
-    'list-ui':       { x: COL_X[0], y: ROW_Y[0] },
-    'feed-sync':     { x: COL_X[1], y: ROW_Y[0] },
-    'self-update':   { x: COL_X[2], y: ROW_Y[0] },
-    'native-canvas': { x: COL_X[3], y: ROW_Y[0] },
-    'merge-core':    { x: COL_X[4], y: ROW_Y[0] },
-    'bot-app':       { x: COL_X[0], y: ROW_Y[1] },
-    'bot-runtime':   { x: COL_X[1], y: ROW_Y[1] },
-    'bot-delivery':  { x: COL_X[2], y: ROW_Y[1] },
-    'witness':       { x: COL_X[3], y: ROW_Y[1] },
-    'rule':          { x: COL_X[4], y: ROW_Y[1] },
-    'xdc-app':       { x: COL_X[0], y: ROW_Y[2] },
-    'xdc-canvas':    { x: COL_X[1], y: ROW_Y[2] },
-    'this-page':     { x: COL_X[2], y: ROW_Y[2] },
-    'permanence':    { x: COL_X[3], y: ROW_Y[2] },
-    'howto':         { x: COL_X[4], y: ROW_Y[2] },
-    'tests-android': { x: COL_X[0], y: ROW_Y[3] },
-    'tests-bot':     { x: COL_X[1], y: ROW_Y[3] },
-    'tests-xdc':     { x: COL_X[2], y: ROW_Y[3] },
-    'progress':      { x: COL_X[3], y: ROW_Y[3] },
-    'build-ci':      { x: COL_X[0], y: ROW_Y[4] },
-    'feed-tool':     { x: COL_X[1], y: ROW_Y[4] },
-    'assets-docs':   { x: COL_X[2], y: ROW_Y[4] },
-    'dc-relay':      { x: COL_X[3], y: ROW_Y[4] },
-    'review-src':    { x: COL_X[4], y: ROW_Y[3] },
+    'canvas-ui':    { x: COL_X[0], y: ROW_Y[0] },
+    'content-data': { x: COL_X[1], y: ROW_Y[0] },
+    'generators':   { x: COL_X[2], y: ROW_Y[0] },
+    'rule':         { x: COL_X[4], y: ROW_Y[1] },
+    'build-deploy': { x: COL_X[0], y: ROW_Y[2] },
+    'docs-meta':    { x: COL_X[1], y: ROW_Y[2] },
+    'permanence':   { x: COL_X[3], y: ROW_Y[2] },
+    'howto':        { x: COL_X[4], y: ROW_Y[2] },
+    'progress':     { x: COL_X[3], y: ROW_Y[3] },
 };
 
 
-// C4 model, grounded in the public repo at the pinned snapshot (see
-// sections.ts COMMIT; each relationship names its evidence file). Runnable
-// containers: itdapk, itdxdc, itdweb and the feed encryption CLI. Tests
-// attach to the containers they verify; build/CI and repo docs stay one
-// honestly-labeled supporting group; the developer and the draft GitHub
-// Actions workflows appear as people/external systems, not runtime boxes.
-// Solid lines are observed flows or evidenced manual steps; dashed lines
-// are designed but not active (draft workflows) or design similarity with
-// no deployed runtime link.
+// C4 model of vana itself, grounded in this repo at the pinned snapshot
+// (see sections.ts COMMIT; each relationship names its evidence file).
+// Runnable container: the canvas web app. The generators are hand-run CLIs;
+// build/deploy and repo docs stay one honestly-labeled supporting group,
+// not runtime architecture. Solid lines are observed flows; dashed lines
+// mark one-time history (the intodo extraction), not a live link.
 //
 // The container and system bands are true semantic zoom: instead of
 // shrinking a fixed world-space diagram, each band re-lays-out against the
@@ -106,32 +88,27 @@ const DEFAULT_POS: Record<string, Pos> = {
 // size at every zoom level, and edges route around unrelated boxes.
 type C4Node = { id: string; label: string; sub: string; kind: 'container' | 'support' | 'external' | 'person' | 'system'; members?: string[]; attached?: string[]; frac: { fx: number; fy: number } };
 const C4_CONTAINERS: C4Node[] = [
-    { id: 'c-app', label: 'itdapk - Android app', sub: 'Java/Kotlin + Chaquopy', kind: 'container', frac: { fx: 0.5, fy: 0.15 },
-      members: ['list-ui', 'feed-sync', 'self-update', 'native-canvas', 'merge-core', 'bot-app', 'bot-runtime', 'bot-delivery', 'witness'],
-      attached: ['tests-android', 'tests-bot'] },
-    { id: 'c-xdc', label: 'itdxdc - webxdc app', sub: 'JavaScript in DeltaChat', kind: 'container', frac: { fx: 0.22, fy: 0.44 }, members: ['xdc-app', 'xdc-canvas'], attached: ['tests-xdc'] },
-    { id: 'c-web', label: 'itdweb - review page', sub: 'static GitHub Pages site', kind: 'container', frac: { fx: 0.72, fy: 0.48 },
-      members: ['this-page', 'review-src'], attached: ['howto', 'rule', 'permanence', 'progress'] },
-    // The feed encryption tool is a runnable container in C4 terms (a CLI
-    // application): it reads feed JSON on stdin and prints the IFW1 payload.
-    // It does NOT sign and does NOT upload - publishing the feed page is a
-    // manual handoff, so there is no edge from it to Instinct Files.
-    { id: 'c-feedtool', label: 'Feed tool', sub: 'Python CLI, run by hand', kind: 'container', frac: { fx: 0.3, fy: 0.72 }, members: ['feed-tool'] },
-    // Tests attach to the containers they verify; build/CI and repo docs stay
-    // one honestly-labeled supporting group, not fake runtime architecture.
-    { id: 'c-devsupport', label: 'Build, CI & repo docs', sub: 'supporting - not runtime', kind: 'support', frac: { fx: 0.32, fy: 0.85 },
-      members: ['build-ci', 'assets-docs', 'dc-relay'] },
+    { id: 'c-app', label: 'Canvas web app', sub: 'React + esbuild static bundle', kind: 'container', frac: { fx: 0.5, fy: 0.15 },
+      members: ['canvas-ui', 'content-data'], attached: ['howto', 'rule', 'permanence', 'progress'] },
+    // The generators are runnable containers in C4 terms (CLI applications):
+    // they read a local vana checkout and write the review content. They run
+    // by hand, never in CI, so there is no edge from them to GitHub Actions.
+    { id: 'c-gen', label: 'Content generators', sub: 'Python CLIs, run by hand', kind: 'container', frac: { fx: 0.24, fy: 0.5 }, members: ['generators'] },
+    // Build/deploy pipeline and repo docs stay one honestly-labeled
+    // supporting group, not fake runtime architecture.
+    { id: 'c-devsupport', label: 'Build, deploy & docs', sub: 'supporting - not runtime', kind: 'support', frac: { fx: 0.72, fy: 0.5 },
+      members: ['build-deploy', 'docs-meta'] },
 ];
 const C4_EXTERNALS: C4Node[] = [
-    { id: 'x-files', label: 'Instinct Files', sub: 'encrypted feed page', kind: 'external', frac: { fx: 0.18, fy: 0.24 } },
-    { id: 'x-github', label: 'GitHub', sub: 'releases + Pages', kind: 'external', frac: { fx: 0.8, fy: 0.24 } },
-    { id: 'x-dc', label: 'DeltaChat network', sub: 'messages + webxdc', kind: 'external', frac: { fx: 0.72, fy: 0.78 } },
-    // Turso was removed from this repo at 042141d; no database adapter is diagrammed.
+    { id: 'x-github', label: 'GitHub', sub: 'source repo + Pages', kind: 'external', frac: { fx: 0.8, fy: 0.24 } },
+    { id: 'x-gha', label: 'GitHub Actions', sub: 'build + deploy on push', kind: 'external', frac: { fx: 0.18, fy: 0.24 } },
+    { id: 'x-intodo', label: 'intodo', sub: 'origin project (unchanged)', kind: 'external', frac: { fx: 0.5, fy: 0.8 } },
 ];
-// The developer appears on the container view as the person who builds and
-// tests the apps and runs the feed tool - an ordinary external role only.
+// People on the container view: the owner who writes and regenerates the
+// content, and the visitor reviewing the page in their own browser.
 const C4_PEOPLE: C4Node[] = [
-    { id: 'p-dev', label: 'Developer', sub: 'builds + publishes', kind: 'person', frac: { fx: 0.2, fy: 0.62 } },
+    { id: 'p-owner', label: 'Owner', sub: 'writes + reviews', kind: 'person', frac: { fx: 0.2, fy: 0.62 } },
+    { id: 'p-visitor', label: 'Visitor', sub: 'anyone with the link', kind: 'person', frac: { fx: 0.62, fy: 0.72 } },
 ];
 const CONTAINER_NODES: C4Node[] = [...C4_CONTAINERS, ...C4_PEOPLE, ...C4_EXTERNALS];
 
@@ -155,7 +132,7 @@ const COMP_NAME: Record<string, string> = Object.fromEntries(COMPONENTS.map((c) 
 // the label is inverse-scaled (constant screen size), so its world height
 // grows as zoom falls; 78 world px clears it down to z ~ 0.55.
 const NEST_PAD = 28, NEST_LABEL_H = 78, NEST_GAP = 22, NEST_COL_W = 392, NEST_FRAME_GAP = 360;
-const NEST_COLS: Record<string, number> = { 'c-app': 2, 'c-xdc': 2, 'c-web': 2, 'c-feedtool': 1, 'c-devsupport': 2 };
+const NEST_COLS: Record<string, number> = { 'c-app': 2, 'c-gen': 1, 'c-devsupport': 2 };
 // Two frame columns, height-balanced so the whole map fits a phone screen
 // at a meaningfully higher zoom (better spread):
 // the tall app frame pairs with the supporting frame on the left, the other
@@ -163,13 +140,13 @@ const NEST_COLS: Record<string, number> = { 'c-app': 2, 'c-xdc': 2, 'c-web': 2, 
 // Frames size themselves by DOM flow (real card heights, no estimates),
 // stacked inside absolute-positioned columns. Positions are world-fixed:
 // nothing re-lays with the camera.
-const NEST_COLUMNS: string[][] = [['c-app', 'c-devsupport'], ['c-xdc', 'c-web', 'c-feedtool']];
+const NEST_COLUMNS: string[][] = [['c-app'], ['c-gen', 'c-devsupport']];
 const NEST_FRAME_W = (gid: string) => (NEST_COLS[gid] ?? 2) * NEST_COL_W - NEST_GAP + 2 * NEST_PAD;
 // v4 composition (C4 sample proportions): the whole
-// frame complex shifts right so externals can spread on ALL FOUR sides of
-// the boundary - people on top, Developer/Instinct Files on the left flank,
-// GitHub Actions/GitHub on the right flank, DeltaChat on the bottom. Short
-// edges exit the nearest side instead of crowding the bottom strip.
+// frame complex shifts right so externals can spread around the boundary -
+// people on top, GitHub Actions/GitHub on the right flank, intodo (origin
+// project) on the left flank of the system band. Short edges exit the
+// nearest side instead of crowding the bottom strip.
 const FRAME_DX = 712;
 const NEST_COL_X = [40 + FRAME_DX, 40 + FRAME_DX + NEST_FRAME_W('c-app') + NEST_FRAME_GAP];
 // Estimated frame/card bounds, used only to zoom toward a container or card
@@ -202,84 +179,73 @@ const NEST_EST: { frames: Record<string, { x: number; y: number; w: number; h: n
 })();
 type C4Rel = { a: string; b: string; label: string; dashed?: boolean; side?: 1 | -1; plain?: boolean };
 const C4_RELS: C4Rel[] = [
-    { a: 'c-app', b: 'x-files', label: 'encrypted feed (HTTPS)' },                      // app/.../SyncEngine.java
-    { a: 'c-app', b: 'x-github', label: 'update check + APK download' },                // app/.../UpdateCheck.java
-    { a: 'c-app', b: 'x-dc', label: 'bot bridge + webxdc (RPC)' },                      // app/src/main/python/bot.py, bot_runtime.py, delivery_bot.py
-    { a: 'c-xdc', b: 'x-dc', label: 'webxdc updates' },                                 // webxdc/js/app.js
-    { a: 'c-web', b: 'x-github', label: 'links at pinned commit' },                     // itdweb/src/sections.ts
-    { a: 'c-app', b: 'c-xdc', label: 'same merge algorithm, no runtime link', dashed: true, plain: true }, // app/.../merge/MergeDoc.java vs webxdc/js/mergedoc.js
-    { a: 'p-dev', b: 'c-app', label: 'builds + tests (Gradle)' },              // gradlew, app/build.gradle, app/src/test
-    { a: 'p-dev', b: 'c-feedtool', label: 'feed JSON in, IFW1 payload out' },  // tools/encrypt_feed.py (stdin -> stdout, print-only)
+    { a: 'c-gen', b: 'c-app', label: 'generates review content' },                      // tools/gen_sections.py, tools/gen_code.py (--out src/)
+    { a: 'c-app', b: 'x-github', label: 'source links at pinned commit' },              // App.tsx SectionCard links
+    { a: 'p-owner', b: 'c-gen', label: 'runs by hand after source changes' },           // README: content refresh
+    { a: 'p-visitor', b: 'c-app', label: 'reads + marks (localStorage only)' },         // files-shim.tsx useLocalState
+    { a: 'c-devsupport', b: 'x-github', label: 'push-triggered build + Pages deploy' }, // .github/workflows/deploy.yml, build.sh
 ];
 const SYS_NODES: C4Node[] = [
-    { id: 'p-owner', label: 'Owner', sub: 'personal user', kind: 'person', frac: { fx: 0.22, fy: 0.2 } },
-    { id: 'p-members', label: 'Group members', sub: 'DeltaChat chat', kind: 'person', frac: { fx: 0.78, fy: 0.2 } },
-    { id: 'p-dev', label: 'Developer', sub: 'builds + publishes', kind: 'person', frac: { fx: 0.5, fy: 0.1 } },
-    { id: 's-intodo', label: 'intodo', sub: 'reminders + lists', kind: 'system', frac: { fx: 0.5, fy: 0.44 } },
+    { id: 'p-owner', label: 'Owner', sub: 'writes + reviews', kind: 'person', frac: { fx: 0.22, fy: 0.2 } },
+    { id: 'p-visitor', label: 'Visitor', sub: 'anyone with the link', kind: 'person', frac: { fx: 0.78, fy: 0.2 } },
+    { id: 's-vana', label: 'vana', sub: 'self-review canvas', kind: 'system', frac: { fx: 0.5, fy: 0.44 } },
     { id: 'x-gha', label: 'GitHub Actions', sub: 'build + deploy on push', kind: 'external', frac: { fx: 0.84, fy: 0.44 } },
-    { id: 'x-files', label: 'Instinct Files', sub: 'feed page', kind: 'external', frac: { fx: 0.18, fy: 0.7 } },
-    { id: 'x-github', label: 'GitHub', sub: 'releases + Pages', kind: 'external', frac: { fx: 0.82, fy: 0.7 } },
-    { id: 'x-dc', label: 'DeltaChat network', sub: 'messages + webxdc', kind: 'external', frac: { fx: 0.5, fy: 0.82 } },
+    { id: 'x-intodo', label: 'intodo', sub: 'origin project (unchanged)', kind: 'external', frac: { fx: 0.18, fy: 0.7 } },
+    { id: 'x-github', label: 'GitHub', sub: 'source repo + Pages', kind: 'external', frac: { fx: 0.82, fy: 0.7 } },
 ];
 const SYS_RELS: C4Rel[] = [
-    { a: 'p-owner', b: 's-intodo', label: 'uses + reviews' },
-    { a: 'p-members', b: 's-intodo', label: 'edit shared list' },
-    { a: 's-intodo', b: 'x-files', label: 'feed page' },
-    { a: 's-intodo', b: 'x-github', label: 'source, releases, pages' },
-    { a: 's-intodo', b: 'x-dc', label: 'bot + webxdc' },
-    { a: 'p-dev', b: 's-intodo', label: 'builds + tests (Gradle)' },
-    // Both workflows are REVIEW DRAFTS, manual workflow_dispatch only: no
-    // automatic CI runs on push (grounded in .github/workflows/*.yml).
-    { a: 'p-dev', b: 'x-gha', label: 'triggers release + render-check (manual run)', dashed: true },
-    { a: 'x-gha', b: 'x-github', label: 'signs + publishes APK (manual run)', dashed: true },
-    // encrypt_feed.py only prints ciphertext; publishing the feed page is a
-    // manual human step (rebuild + publish the File), not an integration.
-    { a: 'p-dev', b: 'x-files', label: 'encrypts feed, publishes page by hand' },
+    { a: 'p-owner', b: 's-vana', label: 'writes + reviews' },
+    { a: 'p-visitor', b: 's-vana', label: 'reads + marks (local only)' },
+    { a: 's-vana', b: 'x-github', label: 'source links at pinned commit' },
+    { a: 'p-owner', b: 'x-github', label: 'pushes source' },
+    { a: 'x-github', b: 'x-gha', label: 'push to main triggers' },
+    { a: 'x-gha', b: 'x-github', label: 'builds + deploys the Pages site' },
+    { a: 'x-github', b: 'p-visitor', label: 'serves the page (HTTPS)' },
+    // The canvas was extracted from intodo once; the original review page
+    // keeps serving from intodo, unchanged. Dashed: history, not a live link.
+    { a: 'x-intodo', b: 's-vana', label: 'one-time extraction; original page unchanged', dashed: true, plain: true },
 ];
 // Supporting C4 views alongside the nested structure:
 // two dynamic diagrams (each ONE verifiable causal scenario, numbered over
 // time) and a deployment diagram (where each container actually runs). Same
 // canvas, same pan/zoom, same numbered-badge + docked-key mechanics; every
 // step names its repo evidence. Public repo content only.
-// Scenario 1: a shared-list edit syncs to the group (webxdc ops path).
+// Scenario 1: a source change goes live (push to Pages).
 const FLOW_NODES: C4Node[] = [
-    { id: 'f-xdc', label: 'itdxdc - webxdc app', sub: "a member's shared list", kind: 'container', frac: { fx: 0.14, fy: 0.28 } },
-    { id: 'f-dc', label: 'DeltaChat network', sub: 'messages + webxdc', kind: 'external', frac: { fx: 0.5, fy: 0.16 } },
-    { id: 'f-app', label: 'itdapk bot host', sub: 'Android app, python bot', kind: 'container', frac: { fx: 0.86, fy: 0.28 } },
-    { id: 'f-xdc2', label: "Other members' itdxdc apps", sub: 'their shared lists', kind: 'container', frac: { fx: 0.5, fy: 0.74 } },
+    { id: 'f-dev', label: 'Owner', sub: 'developer machine', kind: 'person', frac: { fx: 0.12, fy: 0.5 } },
+    { id: 'f-repo', label: 'GitHub repo', sub: 'irvan-putra/vana, main', kind: 'external', frac: { fx: 0.4, fy: 0.22 } },
+    { id: 'f-gha', label: 'GitHub Actions', sub: 'deploy.yml: build + deploy jobs', kind: 'external', frac: { fx: 0.68, fy: 0.22 } },
+    { id: 'f-pages', label: 'GitHub Pages', sub: 'vanipy.com/vana/', kind: 'external', frac: { fx: 0.88, fy: 0.55 } },
+    { id: 'f-visitor', label: "Visitor's browser", sub: 'any device', kind: 'person', frac: { fx: 0.5, fy: 0.8 } },
 ];
 const FLOW_STEPS: C4Rel[] = [
-    { a: 'f-xdc', b: 'f-dc', label: 'member edit sent as one webxdc status update {ops} · webxdc/js/app.js sendOps' },
-    { a: 'f-dc', b: 'f-xdc2', label: 'relayed to every member; each app applies ops on receipt · app.js setUpdateListener', side: 1 },
-    { a: 'f-dc', b: 'f-app', label: 'relayed to the bot host; trust gate, ops persisted, watermark advances · bot.py on_status_update/process_instance' },
-    { a: 'f-xdc2', b: 'f-dc', label: 'later, separate phase: only when a trusted instance boots fresh, it sends a boot hint (unknown instances are not registered) · bot.py is_boot', side: 1 },
-    { a: 'f-app', b: 'f-dc', label: 'if the gate authorizes that boot, the bot MAY replay restore batches (RESTORE_BATCH 50) · bot.py send_update', side: -1 },
+    { a: 'f-dev', b: 'f-repo', label: 'git push to main with a canvas change' },
+    { a: 'f-repo', b: 'f-gha', label: 'push triggers the build job: locked npm ci --ignore-scripts + esbuild (contents: read only) · .github/workflows/deploy.yml, build.sh', side: 1 },
+    { a: 'f-gha', b: 'f-pages', label: 'deploy job publishes dist/ - the only privileged job (pages: write, github-pages environment)' },
+    { a: 'f-pages', b: 'f-visitor', label: 'served over HTTPS; the deploy job polls the live URL until it serves the exact built bytes · tools/verify_live.sh', side: 1 },
 ];
-// Scenario 2: the Android app list feed (a separate, manual publication).
+// Scenario 2: refreshing the review content after the source changes.
 const FEED_NODES: C4Node[] = [
-    { id: 'g-dev', label: 'Developer', sub: 'build + publish', kind: 'person', frac: { fx: 0.12, fy: 0.5 } },
-    { id: 'g-tool', label: 'feed encryption tool', sub: 'Python CLI', kind: 'container', frac: { fx: 0.4, fy: 0.22 } },
-    { id: 'g-files', label: 'Instinct Files', sub: 'encrypted feed page', kind: 'external', frac: { fx: 0.68, fy: 0.22 } },
-    { id: 'g-app', label: 'itdapk', sub: 'Android app', kind: 'container', frac: { fx: 0.88, fy: 0.6 } },
+    { id: 'g-dev', label: 'Owner', sub: 'developer machine', kind: 'person', frac: { fx: 0.12, fy: 0.5 } },
+    { id: 'g-gen', label: 'Content generators', sub: 'tools/gen_sections.py + gen_code.py', kind: 'container', frac: { fx: 0.4, fy: 0.22 } },
+    { id: 'g-data', label: 'Generated content', sub: 'src/sections.ts + src/code.ts', kind: 'container', frac: { fx: 0.68, fy: 0.22 } },
+    { id: 'g-live', label: 'Live canvas', sub: 'vanipy.com/vana/', kind: 'external', frac: { fx: 0.88, fy: 0.6 } },
 ];
 const FEED_STEPS: C4Rel[] = [
-    { a: 'g-dev', b: 'g-tool', label: 'feed JSON in, encrypted payload printed · tools/encrypt_feed.py (print-only)' },
-    { a: 'g-dev', b: 'g-files', label: 'payload published to the feed page by hand' },
-    { a: 'g-files', b: 'g-app', label: 'itdapk GETs the feed when paired; the encrypted feed is returned and decrypted on device with the paired key · FeedSyncWorker.java + SyncEngine.java' },
+    { a: 'g-dev', b: 'g-gen', label: 'points both generators at a local vana checkout (--repo) · README content refresh' },
+    { a: 'g-gen', b: 'g-data', label: 'regenerates sections.ts + code.ts pinned at that commit; the generated files are excluded from their own digests · tools/gen_sections.py' },
+    { a: 'g-dev', b: 'g-live', label: 'commits the regenerated content and pushes - the ship flow takes it live', side: 1 },
 ];
 const DEPLOY_NODES: C4Node[] = [
-    { id: 'd-phone', label: 'Android phone', sub: 'itdapk · itdxdc in DeltaChat', kind: 'container', frac: { fx: 0.5, fy: 0.14 } },
-    { id: 'd-devmachine', label: 'Developer machine', sub: 'Gradle build · feed CLI', kind: 'container', frac: { fx: 0.22, fy: 0.5 } },
-    { id: 'd-github', label: 'GitHub', sub: 'Pages: itdweb · Releases: APK', kind: 'external', frac: { fx: 0.76, fy: 0.3 } },
-    { id: 'd-files', label: 'Instinct Files', sub: 'encrypted feed page', kind: 'external', frac: { fx: 0.76, fy: 0.68 } },
-    { id: 'd-dc', label: 'DeltaChat network', sub: 'messages + webxdc', kind: 'external', frac: { fx: 0.5, fy: 0.84 } },
+    { id: 'd-browser', label: "Visitor's browser", sub: 'static bundle + localStorage marks', kind: 'container', frac: { fx: 0.5, fy: 0.14 } },
+    { id: 'd-devmachine', label: 'Developer machine', sub: 'editors + generators + git', kind: 'container', frac: { fx: 0.22, fy: 0.5 } },
+    { id: 'd-github', label: 'GitHub', sub: 'repo + Pages (vanipy.com/vana/)', kind: 'external', frac: { fx: 0.76, fy: 0.3 } },
+    { id: 'd-gha', label: 'GitHub Actions runner', sub: 'build + deploy jobs', kind: 'external', frac: { fx: 0.76, fy: 0.68 } },
 ];
 const DEPLOY_RELS: C4Rel[] = [
-    { a: 'd-phone', b: 'd-dc', label: 'messages + webxdc (RPC)' },                   // app/src/main/python/bot.py
-    { a: 'd-phone', b: 'd-github', label: 'APK updates + review page (HTTPS)' },     // app/.../UpdateCheck.java, itdweb/
-    { a: 'd-phone', b: 'd-files', label: 'fetches encrypted feed (HTTPS)' },         // app/.../SyncEngine.java
-    { a: 'd-devmachine', b: 'd-github', label: 'git push + release upload' },        // gradlew, GitHub Releases
-    { a: 'd-devmachine', b: 'd-files', label: 'publishes feed page (manual)' },      // tools/encrypt_feed.py output handoff
+    { a: 'd-github', b: 'd-browser', label: 'serves the static bundle (HTTPS)' },      // index.html + app.<hash>.js/css
+    { a: 'd-gha', b: 'd-github', label: 'builds + deploys dist/ on push to main' },    // .github/workflows/deploy.yml
+    { a: 'd-devmachine', b: 'd-github', label: 'git push' },                           // any git client
 ];
 const VIEW_SETS = { flow: { nodes: FLOW_NODES, rels: FLOW_STEPS }, flowfeed: { nodes: FEED_NODES, rels: FEED_STEPS }, deploy: { nodes: DEPLOY_NODES, rels: DEPLOY_RELS } } as const;
 // key lookup: short edge labels stay nameless on the map, so the docked key
@@ -776,7 +742,7 @@ function SectionCard({ s, mark, expanded, finding, onToggleExpand, onMark, onFin
         <p>{s.purpose}</p>
         <ul className="rc-files">
             {shown.map((fl) => (
-                <li key={fl.path}><TextLink href={`https://github.com/irvan-putra/intodo/blob/${COMMIT}/${fl.path}`}><code>{fl.path.split('/').pop()}</code></TextLink>{fl.lines != null ? ` - ${fl.lines} lines` : fl.note ? ` - ${fl.note}` : ''}</li>
+                <li key={fl.path}><TextLink href={`https://github.com/irvan-putra/vana/blob/${COMMIT}/${fl.path}`}><code>{fl.path.split('/').pop()}</code></TextLink>{fl.lines != null ? ` - ${fl.lines} lines` : fl.note ? ` - ${fl.note}` : ''}</li>
             ))}
         </ul>
         {s.files.length > 5 && (
@@ -789,7 +755,7 @@ function SectionCard({ s, mark, expanded, finding, onToggleExpand, onMark, onFin
         <ul>
             {s.notChecked.map((n) => <li key={n}>{n}</li>)}
         </ul>
-        <p><TextLink href={`https://github.com/irvan-putra/intodo/tree/${COMMIT}/${s.link}`}>Open this folder at {COMMIT_SHORT}</TextLink></p>
+        <p><TextLink href={`https://github.com/irvan-putra/vana/tree/${COMMIT}/${s.link}`}>Open this folder at {COMMIT_SHORT}</TextLink></p>
         <p className="rc-nchead">Your findings</p>
         <textarea
             className="rc-findings"
@@ -1424,10 +1390,8 @@ const compTileSize = (gid: string, n: number) => {
     // stay visible at the container band too.
     const groupLayout: GroupNode[] = [
         ...frameNodes,
-        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-members', SYS_NODES, 2150, 280, 240, 150),
-        extNode('p-dev', SYS_NODES, 180, 900, 240, 150),
-        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-files', SYS_NODES, 180, 1400, 240, 150),
-        extNode('x-github', SYS_NODES, 3300, 1400, 240, 150), extNode('x-dc', SYS_NODES, 1600, 2340, 240, 150),
+        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-visitor', SYS_NODES, 2150, 280, 240, 150),
+        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-github', SYS_NODES, 3300, 1400, 240, 150),
     ];
     // System band (c4model.com sample as reference):
     // ONE fixed system footprint at every zoom - the boundary rect below is
@@ -1437,37 +1401,33 @@ const compTileSize = (gid: string, n: number) => {
     // seven externals spread on all four sides by relationship, each edge
     // leaving the nearest side, like the C4 System Context sample.
     const sysLayout: GroupNode[] = [
-        { g: SYS_NODES.find((x) => x.id === 's-intodo')!, x: 1750, y: 1220, hw: 1018, hh: 720 },
-        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-members', SYS_NODES, 2150, 280, 240, 150),
-        extNode('p-dev', SYS_NODES, 180, 900, 240, 150),
-        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-files', SYS_NODES, 180, 1400, 240, 150),
-        extNode('x-github', SYS_NODES, 3300, 1400, 240, 150), extNode('x-dc', SYS_NODES, 1600, 2340, 240, 150),
+        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: 1750, y: 1220, hw: 1018, hh: 720 },
+        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-visitor', SYS_NODES, 2150, 280, 240, 150),
+        extNode('x-intodo', SYS_NODES, 180, 900, 240, 150),
+        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-github', SYS_NODES, 3300, 1400, 240, 150),
     ];
     // Container band edges: the frame-level relationships plus the
     // system-level edges that do not duplicate a frame edge (people using
     // the system, and the manual publish chain), routed against the same
     // fixed boundary/externals territory.
     const GRP_EXTRA_RELS = SYS_RELS.filter((r) =>
-        r.a === 'p-owner' || r.a === 'p-members' || (r.a === 'p-dev' && r.b === 'x-gha') || r.a === 'x-gha' || (r.a === 'p-dev' && r.b === 'x-files'));
+        (r.a === 'p-owner' && r.b === 's-vana') || (r.a === 'p-visitor' && r.b === 's-vana')
+        || (r.a === 'x-github' && r.b === 'x-gha') || (r.a === 'x-gha' && r.b === 'x-github'));
     // Authored container-band composition: every relationship has an
     // explicit port-to-port route through dedicated gutters/lanes, and its
     // label is a fixed world-size pill placed next to its own connector
     // (labels instead of numbers; full wording stays in the docked key). No badge is
     // ever suppressed or re-placed by collision heuristics at this band.
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
-        'c-app-x-files': { pts: [[752, 1414], [420, 1414]], pill: [560, 1350], lines: ['feed (HTTPS)'], hw: 135 },
-        'c-app-x-github': { pts: [[1574, 1300], [1900, 1300], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['update check', '+ APK download'], hw: 170 },
-        'c-app-x-dc': { pts: [[1574, 1414], [1750, 1414], [1750, 2283]], pill: [1480, 2130], lines: ['bot bridge', '+ webxdc (RPC)'], hw: 200 },
-        'c-xdc-x-dc': { pts: [[2300, 940], [2300, 975], [2900, 975], [2900, 2340], [1840, 2340]], pill: [2400, 2430], lines: ['webxdc updates'] },
-        'c-web-x-github': { pts: [[2752, 1400], [3060, 1400]], pill: [3080, 1575], lines: ['links at', 'pinned commit'], hw: 165 },
-        'c-app-c-xdc': { pts: [[1574, 914], [1930, 914]], pill: [1750, 1000], lines: ['same merge', 'algo, no', 'runtime link'], hw: 152, hh: 78 },
-        'p-dev-c-app': { pts: [[420, 914], [752, 914]], pill: [581, 830], lines: ['builds + tests', '(Gradle)'], hw: 146 },
-        'p-dev-c-feedtool': { pts: [[220, 995], [220, 1070], [700, 1070], [700, 1990], [2100, 1990], [2100, 1820]], pill: [410, 1620], lines: ['feed JSON in,', 'IFW1 payload out'], hw: 200 },
-        'p-owner-s-intodo': { pts: [[1050, 375], [1050, 500]], pill: [1310, 455], lines: ['uses + reviews'] },
-        'p-members-s-intodo': { pts: [[2150, 375], [2150, 500]], pill: [1910, 505], lines: ['edit shared list'] },
-        'p-dev-x-gha': { pts: [[-60, 880], [-100, 880], [-100, 2050], [3620, 2050], [3620, 900], [3540, 900]], pill: [2300, 2130], lines: ['triggers release +', 'render-check (manual)'], hw: 240 },
-        'x-gha-x-github': { pts: [[3300, 957], [3300, 1343]], pill: [3100, 1130], lines: ['signs + publishes', 'APK (manual)'], hw: 185 },
-        'p-dev-x-files': { pts: [[140, 995], [140, 1343]], pill: [410, 1180], lines: ['encrypts feed,', 'publishes by hand'], hw: 200 },
+        'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
+        'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
+        'p-owner-c-gen': { pts: [[1170, 330], [1750, 330], [1750, 671], [1930, 671]], pill: [1460, 285], lines: ['runs by hand after', 'source changes'], hw: 165 },
+        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1720, 285], lines: ['reads + marks', '(localStorage only)'], hw: 170 },
+        'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
+        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1310, 455], lines: ['writes + reviews'] },
+        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [1910, 505], lines: ['reads + marks', '(local only)'] },
+        'x-github-x-gha': { pts: [[3260, 1325], [3260, 975]], pill: [3030, 1130], lines: ['push to main', 'triggers'], hw: 150 },
+        'x-gha-x-github': { pts: [[3340, 975], [3340, 1325]], pill: [3520, 1130], lines: ['builds + deploys', 'the Pages site'], hw: 170 },
     };
     // Endpoint snap: external/person node boxes are content-sized with
     // counter-scaled (screen-constant) label text, so their top/bottom
@@ -1596,8 +1556,8 @@ const compTileSize = (gid: string, n: number) => {
             <ul>
                 <li>Your view, review marks and findings are remembered in this browser's local storage on this static page. Cards stay fixed in place.</li>
                 <li>Not synced across devices; clearing browser storage resets them.</li>
-                <li>Public repo content only, generated from irvan-putra/intodo @ {COMMIT_SHORT} on Nov 13, 2026; nothing is sent anywhere or published with this page, and nothing here changes the app or the repo.</li>
-                <li>Marks made on the Instinct-hosted review page live in that browser's storage and cannot carry over here.</li>
+                <li>Public repo content only, generated from irvan-putra/vana @ {COMMIT_SHORT} on Nov 14, 2026; nothing is sent anywhere or published with this page, and nothing here changes the repo.</li>
+                <li>Marks made on the old intodo review page stay under that page's own storage keys and do not carry over here.</li>
                 <li>Long-term ownership (export, backup) is an open question, not a claim.</li>
             </ul>
         </CardShell>,
@@ -1656,7 +1616,7 @@ const compTileSize = (gid: string, n: number) => {
                     })}
                 </div>
 
-                {/* system context level: people + the intodo system + external
+                {/* system context level: people + the vana system + external
                     systems, furthest zoomed out. Tapping the system drops
                     into the container level. */}
                 <svg className="rc-sysedges" width={WORLD.w} height={WORLD.h}>
@@ -1886,8 +1846,8 @@ const compTileSize = (gid: string, n: number) => {
                 <span className="rc-menu-head">Diagram views</span>
                 <div className="rc-menu-row">
                     <button type="button" className={`rc-menu-btn${view === 'structure' ? ' rc-menu-on' : ''}`} onClick={() => setView('structure')}>Structure</button>
-                    <button type="button" className={`rc-menu-btn${view === 'flow' ? ' rc-menu-on' : ''}`} onClick={() => setView('flow')}>List edit flow</button>
-                    <button type="button" className={`rc-menu-btn${view === 'flowfeed' ? ' rc-menu-on' : ''}`} onClick={() => setView('flowfeed')}>App feed flow</button>
+                    <button type="button" className={`rc-menu-btn${view === 'flow' ? ' rc-menu-on' : ''}`} onClick={() => setView('flow')}>Ship flow</button>
+                    <button type="button" className={`rc-menu-btn${view === 'flowfeed' ? ' rc-menu-on' : ''}`} onClick={() => setView('flowfeed')}>Content refresh</button>
                     <button type="button" className={`rc-menu-btn${view === 'deploy' ? ' rc-menu-on' : ''}`} onClick={() => setView('deploy')}>Where it runs</button>
                 </div>
                 {view === 'structure' ? (
@@ -1921,9 +1881,9 @@ const compTileSize = (gid: string, n: number) => {
                 detail band): appearing/disappearing would resize the canvas
                 mid-gesture and retrigger the viewport fit, yanking the pan. */}
             {(() => {
-                const cap = view === 'flow' ? 'Understand - a shared list edit, step by step' :
-                    view === 'flowfeed' ? 'Understand - the app list feed, step by step' :
-                    view === 'deploy' ? 'Understand - where intodo runs' :
+                const cap = view === 'flow' ? 'Understand - a source change going live, step by step' :
+                    view === 'flowfeed' ? 'Understand - refreshing the review content, step by step' :
+                    view === 'deploy' ? 'Understand - where vana runs' :
                     band === 'sys' ? 'Understand - the system context' :
                     band === 'grp' ? 'Understand - the containers' :
                     focusedComp ? `Component + code layer: ${COMP_NAME[focusedComp] ?? focusedComp} - tap elsewhere to close` :

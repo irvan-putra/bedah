@@ -2,7 +2,7 @@
   "name": "vana-review-canvas",
   "private": true,
   "version": "1.0.0",
-  "description": "Static GitHub Pages build of the intodo review canvas",
+  "description": "Static GitHub Pages build of the vana self-review canvas",
   "dependencies": {
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
