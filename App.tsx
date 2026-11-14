@@ -1056,7 +1056,7 @@ const compTileSize = (gid: string, n: number) => {
         // Fit the group's frame; never land wider than the detail band, so a
         // container tap always arrives inside the nested frame, even on a
         // phone where the frame is many viewports wide.
-        const zFit = Math.min(evp.w / (bw + 140), evp.h / (bh + 140), 0.75);
+        const zFit = Math.min(evp.w / (bw + 140), evp.h / (bh + 140), 0.8);
         const z = clampZ(Math.max(zFit, LO_Z + 0.04));
         const c = clampCam({ x: minX + bw / 2, y: minY + bh / 2, z });
         setCam(c); persist(c, pos, reviews);
@@ -1356,14 +1356,27 @@ const compTileSize = (gid: string, n: number) => {
     // the current framing is kept while nodes gain real separation.
     // The supporting views have few nodes; spreading them past the screen
     // would just clip them, so only the structure bands use the canvas.
-    // Phones spread less: their first landing must still show whole nodes.
-    const SPREAD_X = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.15 : 1.35;
-    const SPREAD_Y = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.15 : 1.3;
-    // One fixed world-anchored layout for every band and view:
+    // Phone-first spread: a full-map Fit must leave every node a readable
+    // share of the screen (C4 system-context reference proportions: people
+    // boxes ~1/7 of the fitted width). Wider screens get a wider spread,
+    // so the fit zoom lands near the top of the system band instead of far
+    // below it (phone fit was z~0.10, deep in the far-zoom tier where only
+    // names remain).
+    const SPREAD_X = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.3 : 1.55;
+    const SPREAD_Y = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.3 : 1.5;
+    const MIN_SPREAD = { w: 1750, h: 1250 };
+    // One fixed world-anchored layout per viewport size:
     // a single continuous map. Bands change only how much
     // detail renders inside each frame, never where anything sits; zoom and
-    // pan never re-lay.
-    const layRect: Rect = { x: 40, y: 40, w: WORLD.w - 80, h: WORLD.h - 80 };
+    // pan never re-lay. The spread is a function of the VIEWPORT (recomputed
+    // on resize/rotation, like any responsive layout), never of the camera.
+    const laySpread = view !== 'structure' ? { w: 0, h: 0 } : {
+        w: Math.min(WORLD.w - 80, Math.max(MIN_SPREAD.w, evp.w * SPREAD_X / SYS_Z)),
+        h: Math.min(WORLD.h - 80, Math.max(MIN_SPREAD.h, evp.h * SPREAD_Y / SYS_Z)),
+    };
+    const layRect: Rect = view !== 'structure' ? { x: 40, y: 40, w: WORLD.w - 80, h: WORLD.h - 80 } : {
+        x: (WORLD.w - laySpread.w) / 2, y: 40 + (WORLD.h - 80 - laySpread.h) / 2, w: laySpread.w, h: laySpread.h,
+    };
     // One stable world map: at the container and
     // container/system bands each container renders as its SAME frame with
     // its FULL detail bounds reserved at every zoom; deeper zooms reveal
@@ -1378,40 +1391,48 @@ const compTileSize = (gid: string, n: number) => {
             const f = NEST_EST.frames[gid];
             return { g, x: f.x + f.w / 2, y: f.y + f.h / 2, hw: f.w / 2, hh: f.h / 2 };
         }));
-    const extNode = (id: string, defs: C4Node[], cx: number, cy: number, hw = 160, hh = 90): GroupNode =>
-        ({ g: defs.find((x) => x.id === id)!, x: cx, y: cy, hw, hh });
-    // Externals flank the frame complex on all four sides (v4 city spread);
-    // nodes shared by the container and system layouts keep identical world
-    // coordinates.
+    // Node slots are fractions of the spread rect, so the composition keeps
+    // its shape at every viewport size (C4 system-context proportions:
+    // people along the top, GitHub pair stacked on the right flank, intodo
+    // mid-left). The slot reserves half the MAXIMUM content stack a node can
+    // show at this band (name + sub + kind tag, wrapped): at phone fit the
+    // rendered box fills the slot, so slots can never overlap at any
+    // reachable zoom; at closer zooms the same box is a smaller share of the
+    // screen and the slot is generous room.
+    const NW = 0.09, PH = 0.09, XH = 0.11;
+    const extNode = (id: string, defs: C4Node[], fx: number, fy: number, hw: number, hh: number): GroupNode =>
+        ({ g: defs.find((x) => x.id === id)!, x: layRect.x + fx * layRect.w, y: layRect.y + fy * layRect.h, hw: layRect.w * hw, hh: layRect.h * hh });
+    const nodeP = (id: string, fx: number, fy: number): GroupNode => extNode(id, SYS_NODES, fx, fy, NW, PH);
+    const nodeX = (id: string, fx: number, fy: number): GroupNode => extNode(id, SYS_NODES, fx, fy, NW, XH);
+    // Externals flank the frame complex on all four sides; nodes shared by
+    // the container and system layouts keep identical world coordinates.
     // Externals keep their SYSTEM-band positions AND size at the container
-    // band: the same city spread around the boundary at every zoom (LOD
-    // changes visibility only, never territory). People and GitHub Actions
-    // stay visible at the container band too.
+    // band: the same spread around the boundary at every zoom (LOD changes
+    // visibility only, never territory).
     const groupLayout: GroupNode[] = [
         ...frameNodes,
-        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-visitor', SYS_NODES, 2150, 280, 240, 150),
-        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-github', SYS_NODES, 3300, 1400, 240, 150),
+        nodeP('p-owner', 0.31, 0.13), nodeP('p-visitor', 0.66, 0.13),
+        nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
     ];
     // System band (c4model.com sample as reference):
-    // ONE fixed system footprint at every zoom - the boundary rect below is
-    // the same world rect at the system, container and section bands; only
-    // what is visible inside it changes with zoom (LOD), never geometry.
-    // v4 city spread: the boundary sits centered in a wider world with the
-    // seven externals spread on all four sides by relationship, each edge
-    // leaving the nearest side, like the C4 System Context sample.
+    // ONE fixed system footprint per spread - the boundary rect below is the
+    // same world rect at the system, container and section bands; only what
+    // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
-        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: 1750, y: 1220, hw: 1018, hh: 720 },
-        extNode('p-owner', SYS_NODES, 1050, 280, 240, 150), extNode('p-visitor', SYS_NODES, 2150, 280, 240, 150),
-        extNode('x-intodo', SYS_NODES, 180, 900, 240, 150),
-        extNode('x-gha', SYS_NODES, 3300, 900, 240, 150), extNode('x-github', SYS_NODES, 3300, 1400, 240, 150),
+        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: layRect.x + 0.44 * layRect.w, y: layRect.y + 0.52 * layRect.h, hw: layRect.w * 0.24, hh: layRect.h * 0.33 },
+        nodeP('p-owner', 0.31, 0.13), nodeP('p-visitor', 0.66, 0.13),
+        nodeX('x-intodo', 0.06, 0.52),
+        nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
     ];
-    // Container band edges: the frame-level relationships plus the
-    // system-level edges that do not duplicate a frame edge (people using
-    // the system, and the manual publish chain), routed against the same
-    // fixed boundary/externals territory.
+    // Container band edges: the frame-level relationships plus the people
+    // edges from the system level. The GitHub<->Actions pair used to render
+    // here too, but their edge labels are world-sized pills while the node
+    // boxes are screen-constant - at phone fit the pills ended up smaller
+    // than the boxes and unreadable. That pair now renders at the system
+    // band only, where labels declutter Maps-style; the docked key lists
+    // them there.
     const GRP_EXTRA_RELS = SYS_RELS.filter((r) =>
-        (r.a === 'p-owner' && r.b === 's-vana') || (r.a === 'p-visitor' && r.b === 's-vana')
-        || (r.a === 'x-github' && r.b === 'x-gha') || (r.a === 'x-gha' && r.b === 'x-github'));
+        (r.a === 'p-owner' && r.b === 's-vana') || (r.a === 'p-visitor' && r.b === 's-vana'));
     // Authored container-band composition: every relationship has an
     // explicit port-to-port route through dedicated gutters/lanes, and its
     // label is a fixed world-size pill placed next to its own connector
@@ -1422,37 +1443,44 @@ const compTileSize = (gid: string, n: number) => {
         'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
         'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1650, 430], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
-        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1120, 455], lines: ['writes + reviews'], hw: 120 },
+        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1110, 430], lines: ['writes + reviews'], hw: 120 },
         'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: ['reads + marks', '(local only)'], hw: 130 },
-        'x-github-x-gha': { pts: [[3260, 1325], [3260, 975]], pill: [3030, 1130], lines: ['push to main', 'triggers'], hw: 150 },
-        'x-gha-x-github': { pts: [[3340, 975], [3340, 1325]], pill: [3520, 1130], lines: ['builds + deploys', 'the Pages site'], hw: 170 },
     };
     // Endpoint snap: external/person node boxes are content-sized with
     // counter-scaled (screen-constant) label text, so their top/bottom
     // borders drift with zoom. First/last route points snap to the live
     // measured border along the segment axis; middle segments and pill
-    // anchors stay on the authored lanes. Authored points stay within the
-    // snap guard (130 world px) of the true border at every zoom.
+    // anchors stay on the authored lanes. The snap guard scales with the
+    // node slot: slots reserve the full content stack at the spread's
+    // reference zoom, so the true border stays within the guard at every
+    // reachable zoom.
     const snapEnds = (pts: Pos[], aId: string, bId: string): Pos[] => {
         const na = extRects[aId] ? sysLayout.find((n) => n.g.id === aId) : null;
         const nb = extRects[bId] ? sysLayout.find((n) => n.g.id === bId) : null;
         if (!na && !nb) return pts;
+        const guard = Math.max(130, layRect.w * NW, layRect.h * XH);
         const out = pts.slice();
         if (na) {
             const r = extRects[aId], p0 = pts[0], p1 = pts[1];
             const dx = p1.x - p0.x, dy = p1.y - p0.y;
             const s = Math.abs(dx) > Math.abs(dy) ? { x: na.x + Math.sign(dx) * r.w / 2, y: p0.y } : { x: p0.x, y: na.y + Math.sign(dy) * r.h / 2 };
-            if (Math.hypot(s.x - p0.x, s.y - p0.y) <= 130) out[0] = s;
+            if (Math.hypot(s.x - p0.x, s.y - p0.y) <= guard) out[0] = s;
         }
         if (nb) {
             const r = extRects[bId], pl = pts[pts.length - 1], pp = pts[pts.length - 2];
             const dx = pl.x - pp.x, dy = pl.y - pp.y;
             const s = Math.abs(dx) > Math.abs(dy) ? { x: nb.x - Math.sign(dx) * r.w / 2, y: pl.y } : { x: pl.x, y: nb.y - Math.sign(dy) * r.h / 2 };
-            if (Math.hypot(s.x - pl.x, s.y - pl.y) <= 130) out[out.length - 1] = s;
+            if (Math.hypot(s.x - pl.x, s.y - pl.y) <= guard) out[out.length - 1] = s;
         }
         return out;
     };
-    const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
+    // Far-zoom tier (Maps-style declutter): below the useful reading zoom
+    // the container band keeps boxes, names and edge lines; the world-sized
+    // label pills would render tinier than the screen-constant node text and
+    // pile onto the GitHub pair, so they stay in the docked key until the
+    // map is zoomed in enough to read them.
+    const grpFar = cam.z < 0.2;
+    const grpRels: RelGeom[] = grpFar ? [] : [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
         return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: false, auth: true, plain: (rel as C4Rel).plain };
     });
@@ -1577,7 +1605,7 @@ const compTileSize = (gid: string, n: number) => {
         <div className="rc-page">
         <div
             ref={vpRef}
-            className={`rc-viewport${dragging ? ' rc-dragging' : ''}${panning ? ' rc-panning' : ''} rc-band-${band}${band === 'sys' ? ' rc-sys' : band === 'grp' ? ' rc-grp' : band === 'lo' ? ' rc-lo' : ''}`}
+            className={`rc-viewport${dragging ? ' rc-dragging' : ''}${panning ? ' rc-panning' : ''} rc-band-${band}${band === 'sys' ? ' rc-sys' : band === 'grp' ? ' rc-grp' : band === 'lo' ? ' rc-lo' : ''}${band === 'grp' && grpFar ? ' rc-far' : ''}${band === 'sys' && cam.z < 0.12 ? ' rc-sysfar' : ''}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endPointer}

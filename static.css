@@ -175,6 +175,14 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-grp .rc-frame-label, .rc-lo .rc-frame-label {
     white-space: normal; max-width: calc(100% - 36px);
 }
+/* Container band: the same per-frame title cap as the section band, so a
+   collapsed frame's label never spills past its border at phone fit zoom;
+   padding caps stay small so the pill leaves room for its own text. */
+.rc-grp .rc-frame-label {
+    font-size: calc(min(calc(15px / var(--camz)), 72px, var(--ftmax, 999px)) * var(--lfscale, 1));
+    padding: min(calc(3px / var(--camz)), 14px) min(calc(8px / var(--camz)), 32px);
+}
+.rc-grp .rc-frame-row2 { gap: 0.4em; }
 .rc-lo .rc-frame-label { font-size: calc(min(calc(15px / var(--camz)), 72px, var(--ftmax, 999px)) * var(--lfscale, 1)); }
 /* Header-fit: the absolute header must clear the
    first card row at the card-visible bands; the renderer steps --lfscale
@@ -421,6 +429,17 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-kindchip-support { border-color: var(--ds-ink-2); color: var(--ds-ink-2); border-style: dashed; }
 .rc-kindchip-person .rc-personicon { width: 9px; height: 12px; vertical-align: -1px; margin-right: 4px; }
 .rc-kindchip-person .rc-personicon circle, .rc-kindchip-person .rc-personicon path { fill: #fff; }
+
+/* Far-zoom tiers (Maps-style declutter: keep names and structure, hide
+   what is too small to read; everything hidden here is one zoom-in away
+   and every relation stays listed in the docked key).
+   - Container band, z<0.2: node sub-labels and kind tags (the renderer
+     also swaps label pills for edge-only lines there).
+   - System band, z<0.12: sub-labels and the system boundary label. */
+.rc-grp.rc-far .rc-grpcount, .rc-grp.rc-far .rc-kindtag,
+.rc-grp.rc-far .rc-frame-sub, .rc-grp.rc-far .rc-frame-kind { display: none; }
+.rc-sys.rc-sysfar .rc-grpcount, .rc-sys.rc-sysfar .rc-node-boundary .rc-grplabel,
+.rc-sys.rc-sysfar .rc-node-boundary .rc-grpcount { display: none; }
 .rc-node-system {
     background: var(--c4-system-tint);
     border-color: var(--c4-system);
