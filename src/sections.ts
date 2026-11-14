@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ eeed950 by gen_sections.py - do not hand-edit.
-export const COMMIT = "eeed95028c0a83026c29033725cccc2aba7256b4";
-export const COMMIT_SHORT = "eeed950";
+// Generated from irvan-putra/vana @ a361a06 by gen_sections.py - do not hand-edit.
+export const COMMIT = "a361a06ce5a47f8db73dd82634a14677db1d6bde";
+export const COMMIT_SHORT = "a361a06";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -14,11 +14,11 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "App.tsx",
-        "lines": 1796
+        "lines": 1812
       },
       {
         "path": "territory.tsx",
-        "lines": 250
+        "lines": 368
       },
       {
         "path": "main.tsx",
@@ -34,7 +34,7 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "static.css",
-        "lines": 754
+        "lines": 757
       },
       {
         "path": "src/style.css",
@@ -45,8 +45,8 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "8e5d0d7582e4",
-    "totalLines": 3006
+    "digest": "e61a4198fad2",
+    "totalLines": 3143
   },
   {
     "id": "content-data",

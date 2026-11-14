@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ eeed950 by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ a361a06 by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "eeed95028c0a83026c29033725cccc2aba7256b4";
-export const CODE_COMMIT_SHORT = "eeed950";
+export const CODE_COMMIT = "a361a06ce5a47f8db73dd82634a14677db1d6bde";
+export const CODE_COMMIT_SHORT = "a361a06";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -233,7 +233,7 @@ export const COMPONENT_REFS: ComponentRef[] = [
 export const CODE_FILES: Record<string, CodeFile> = {
   "App.tsx": {
     "path": "App.tsx",
-    "lines": 1796,
+    "lines": 1812,
     "role": null,
     "els": [
       {
@@ -292,7 +292,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "territory.tsx": {
     "path": "territory.tsx",
-    "lines": 250,
+    "lines": 368,
     "role": "The fixed territory below the container frames: component buildings, file rooms, declaration chips and the relationships between them.",
     "els": [
       {
@@ -414,7 +414,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "static.css": {
     "path": "static.css",
-    "lines": 754,
+    "lines": 757,
     "role": "Static full-screen canvas styles (GitHub Pages variant).",
     "els": [],
     "kindNote": "stylesheet",
@@ -431,7 +431,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 172,
-    "role": "Generated from irvan-putra/vana @ eeed950 by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ a361a06 by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
