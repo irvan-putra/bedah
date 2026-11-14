@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ ae685d1 by gen_sections.py - do not hand-edit.
-export const COMMIT = "ae685d1d7d2bcfa0ec72340ea5ae192fe1131ae3";
-export const COMMIT_SHORT = "ae685d1";
+// Generated from irvan-putra/vana @ 10d9717 by gen_sections.py - do not hand-edit.
+export const COMMIT = "10d97172b66b27025ba8e19cce4971bc33db2e56";
+export const COMMIT_SHORT = "10d9717";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -41,7 +41,7 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "ef0a81f1147b",
+    "digest": "c714ab63a4d1",
     "totalLines": 2938
   },
   {
