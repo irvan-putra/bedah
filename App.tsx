@@ -1263,8 +1263,17 @@ const compTileSize = (gid: string, n: number) => {
             wheelRaf.current = 0;
             if (wheelPending.current) setCam(wheelPending.current);
             window.clearTimeout(wheelTimer.current);
-            wheelTimer.current = window.setTimeout(() => { wheelPending.current = null; persist(camLive.current, pos, reviews); }, 400);
+            wheelTimer.current = window.setTimeout(settleWheel, 400);
         });
+    };
+    // Burst settle: only drop the pending camera once no frame commit is
+    // still outstanding - under a stalled frame (heavy render, throttled
+    // tab) the 400ms quiet timer can fire before the rAF commit, and
+    // nulling then would silently discard wheel events.
+    const settleWheel = () => {
+        if (wheelRaf.current) { wheelTimer.current = window.setTimeout(settleWheel, 400); return; }
+        wheelPending.current = null;
+        persist(camLive.current, pos, reviews);
     };
 
     const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
