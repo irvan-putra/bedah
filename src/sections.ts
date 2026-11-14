@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ eeed950 by gen_sections.py - do not hand-edit.
-export const COMMIT = "eeed95028c0a83026c29033725cccc2aba7256b4";
-export const COMMIT_SHORT = "eeed950";
+// Generated from irvan-putra/vana @ 4f99634 by gen_sections.py - do not hand-edit.
+export const COMMIT = "4f99634dba8278d2cda8f97f85f8b42d10f1442a";
+export const COMMIT_SHORT = "4f99634";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -14,7 +14,7 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "App.tsx",
-        "lines": 1796
+        "lines": 1934
       },
       {
         "path": "territory.tsx",
@@ -34,7 +34,7 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "static.css",
-        "lines": 754
+        "lines": 760
       },
       {
         "path": "src/style.css",
@@ -45,8 +45,8 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "8e5d0d7582e4",
-    "totalLines": 3006
+    "digest": "2e56f2d8affe",
+    "totalLines": 3150
   },
   {
     "id": "content-data",
@@ -63,12 +63,12 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "src/code.ts",
-        "lines": 711,
+        "lines": 684,
         "note": "generated - excluded from digest"
       },
       {
         "path": "src/codemap.ts",
-        "lines": 25,
+        "lines": 23,
         "note": "generated - excluded from digest"
       }
     ],
@@ -76,7 +76,7 @@ export const SECTIONS: Section[] = [
       "The generators read a checkout, so a stale checkout means stale cards - the pinned commit on each card is the tell"
     ],
     "digest": "e3b0c44298fc",
-    "totalLines": 736
+    "totalLines": 707
   },
   {
     "id": "generators",
@@ -92,15 +92,15 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "tools/gen_code.py",
-        "lines": 457
+        "lines": 413
       },
       {
         "path": "tools/codemap_scan.py",
-        "lines": 402
+        "lines": 391
       },
       {
         "path": "tools/ast_ts.mjs",
-        "lines": 137
+        "lines": 123
       },
       {
         "path": "tools/compare_extractors.py",
@@ -110,8 +110,8 @@ export const SECTIONS: Section[] = [
     "notChecked": [
       "Curated component names and section assignments inside the generators are judgment, reviewed only by reading them here"
     ],
-    "digest": "e4928b62cfc7",
-    "totalLines": 1179
+    "digest": "a5441a60bdbd",
+    "totalLines": 1110
   },
   {
     "id": "build-deploy",
@@ -135,7 +135,7 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": ".github/workflows/deploy.yml",
-        "lines": 109
+        "lines": 108
       },
       {
         "path": "tools/verify_live.sh",
@@ -145,8 +145,8 @@ export const SECTIONS: Section[] = [
     "notChecked": [
       "A failed deploy rollback (verify_live.sh only proves the new bytes went live, not that an old page returns on failure)"
     ],
-    "digest": "7b7aafc0b3c5",
-    "totalLines": 758
+    "digest": "72a900bfdc58",
+    "totalLines": 757
   },
   {
     "id": "docs-meta",
@@ -158,7 +158,7 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "README.md",
-        "lines": 119
+        "lines": 93
       },
       {
         "path": ".gitignore",
@@ -166,7 +166,7 @@ export const SECTIONS: Section[] = [
       }
     ],
     "notChecked": [],
-    "digest": "fd72afd4f465",
-    "totalLines": 122
+    "digest": "6b377d14f003",
+    "totalLines": 96
   }
 ];
