@@ -296,7 +296,7 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
             {COMPONENTS.map((cp: C4Component) => {
                 const t = tiles[cp.id];
                 const fitCap = (t.head.w * 0.96) / (cp.name.length * 0.56);
-                const nameCap = Math.min(15, fitCap);
+                const nameCap = Math.min(28, fitCap);
                 const nameShow = zq * Math.min(nameCap, 11 / zq) >= 6.2;
                 return (
                     <g key={cp.id} data-comp={cp.id}>

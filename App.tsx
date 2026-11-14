@@ -945,11 +945,12 @@ function Canvas() {
                 x0 = Math.min(x0, n.x - n.hw - 30); y0 = Math.min(y0, n.y - n.hh - 30);
                 x1 = Math.max(x1, n.x + n.hw + 30); y1 = Math.max(y1, n.y + n.hh + 30);
             });
-            const zr = clampZ(Math.min(w / (x1 - x0), fh / (y1 - y0)) * 0.98);
-            const z = Math.min(Math.max(zr, GROUP_Z * 1.05), COMP_Z * 0.93);
-            // On narrow screens the band floor wins over fitting all frames;
-            // anchor on the main container (fully visible) with neighbours
-            // peeking at the edge as context.
+            // Deepest component-band zoom: component tile names must be
+            // readable at the shortcut landing (owner feedback, 15 Nov), and
+            // the widest screen still fits every container at this zoom.
+            const z = COMP_Z * 0.93;
+            // On narrow screens anchor on the main container (fully visible);
+            // wide screens see every container around it.
             const app = frames.find((n) => n.g.id === 'c-app') ?? frames[0];
             c = { x: app.x, y: app.y + (h - fh) / (2 * z), z };
         } else if (level === 'code') {
@@ -1455,9 +1456,9 @@ function Canvas() {
         // owner -> repo: over the top of the boundary, down the right side, into the repo top
         'p-owner-x-ghrepo': { pts: [[1288, 240], [1540, 240], [1540, 540], [3150, 540], [3150, 1050]], pill: [2500, 575], lines: ['pushes source'], hw: 420, hh: 65 },
         // pipeline lanes between the boxes, pills in the open column left of the flank
-        'x-ghrepo-x-gha': { pts: [[3050, 1245], [3050, 1580]], pill: [2350, 1330], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205 },
-        'x-gha-x-ghrepo': { pts: [[2960, 1580], [2960, 1245]], pill: [2350, 1680], lines: ['checks out', 'main source'], hw: 330, hh: 140 },
-        'x-gha-x-ghpages': { pts: [[3005, 1745], [3005, 2080]], pill: [2250, 2030], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205 },
+        'x-ghrepo-x-gha': { pts: [[3050, 1245], [3050, 1580]], pill: [2290, 1310], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205 },
+        'x-gha-x-ghrepo': { pts: [[2960, 1580], [2960, 1245]], pill: [2350, 1700], lines: ['checks out', 'main source'], hw: 330, hh: 140 },
+        'x-gha-x-ghpages': { pts: [[3005, 1745], [3005, 2080]], pill: [2250, 2075], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205 },
         // pages -> visitor: dedicated lane around the right and top edges
         'x-ghpages-p-visitor': { pts: [[3254, 2162], [3320, 2162], [3320, 180], [2380, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
         'x-intodo-s-vana': { pts: [[508, 1662], [900, 1662], [900, 1168]], pill: [1080, 1662], lines: ['one-time extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
@@ -1503,7 +1504,7 @@ function Canvas() {
     const grpFar = cam.z < 0.16;
     const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
-        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar, auth: true, plain: (rel as C4Rel).plain };
+        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: false, auth: true, plain: (rel as C4Rel).plain };
     });
     // Flyover crossings: where two authored routes cross, the later-drawn
     // edge arcs over the earlier one (circuit-diagram flyover). Crossings
@@ -1686,7 +1687,7 @@ function Canvas() {
                             <g key={g.key} className={`rc-rel-badge${g.dashed ? ' rc-rel-badge-dash' : ''}`}>
                                 <rect x={g.bx - (g.hw ?? g.r)} y={g.by - (g.hh ?? g.r)} width={(g.hw ?? g.r) * 2} height={(g.hh ?? g.r) * 2} rx={Math.min(g.hh ?? g.r, 8 / cam.z)} />
                                 {lines.map((ln, li) => (
-                                    <text key={li} x={g.bx} y={g.by + (li - (lines.length - 1) / 2) * (fs * 1.2) + fs * 0.35} style={{ fontSize: fs }}>{ln}</text>
+                                    <text key={li} x={g.bx} y={g.by + (li - (lines.length - 1) / 2) * (fs * 1.2)} style={{ fontSize: fs }}>{ln}</text>
                                 ))}
                             </g>
                         );
