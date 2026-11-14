@@ -1443,8 +1443,11 @@ const compTileSize = (gid: string, n: number) => {
         'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
         'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1650, 430], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
-        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1110, 430], lines: ['writes + reviews'], hw: 120 },
-        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: ['reads + marks', '(local only)'], hw: 130 },
+        // People edges carry no pills: the people slots sit directly above
+        // the system boundary, so a world-sized pill only fits there on
+        // wide screens; the line stays and the docked key names the relation.
+        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1110, 430], lines: [], hw: 0, hh: 0 },
+        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: [], hw: 0, hh: 0 },
     };
     // Endpoint snap: external/person node boxes are content-sized with
     // counter-scaled (screen-constant) label text, so their top/bottom
@@ -1479,10 +1482,10 @@ const compTileSize = (gid: string, n: number) => {
     // label pills would render tinier than the screen-constant node text and
     // pile onto the GitHub pair, so they stay in the docked key until the
     // map is zoomed in enough to read them.
-    const grpFar = cam.z < 0.2;
+    const grpFar = cam.z < 0.28;
     const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
-        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar, auth: true, plain: (rel as C4Rel).plain };
+        return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar || a.lines.length === 0, auth: true, plain: (rel as C4Rel).plain };
     });
     // Flyover crossings: where two authored routes cross, the later-drawn
     // edge arcs over the earlier one (circuit-diagram flyover). Crossings
