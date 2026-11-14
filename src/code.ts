@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ e7a6140 by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ 3436fba by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "e7a61405b8fc3c4b75b402d746615571feff9404";
-export const CODE_COMMIT_SHORT = "e7a6140";
+export const CODE_COMMIT = "3436fba17d25da04a74f4db56605d1acfdada1af";
+export const CODE_COMMIT_SHORT = "3436fba";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -224,7 +224,7 @@ export const COMPONENT_REFS: ComponentRef[] = [
 export const CODE_FILES: Record<string, CodeFile> = {
   "App.tsx": {
     "path": "App.tsx",
-    "lines": 1948,
+    "lines": 1976,
     "role": null,
     "els": [
       {
@@ -289,7 +289,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "index.html": {
     "path": "index.html",
-    "lines": 14,
+    "lines": 26,
     "role": null,
     "els": [],
     "kindNote": "page",
@@ -346,7 +346,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "static.css": {
     "path": "static.css",
-    "lines": 711,
+    "lines": 731,
     "role": "Static full-screen canvas styles (GitHub Pages variant).",
     "els": [],
     "kindNote": "stylesheet",
@@ -363,7 +363,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 151,
-    "role": "Generated from irvan-putra/vana @ e7a6140 by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ 3436fba by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
