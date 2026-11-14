@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ 35bce79 by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ 0cfee73 by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "35bce7928f362e72be0971647ab68c1609bc98c2";
-export const CODE_COMMIT_SHORT = "35bce79";
+export const CODE_COMMIT = "0cfee730f60e2570ff127e4921838e621909901f";
+export const CODE_COMMIT_SHORT = "0cfee73";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -233,7 +233,7 @@ export const COMPONENT_REFS: ComponentRef[] = [
 export const CODE_FILES: Record<string, CodeFile> = {
   "App.tsx": {
     "path": "App.tsx",
-    "lines": 1812,
+    "lines": 1957,
     "role": null,
     "els": [
       {
@@ -414,7 +414,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "static.css": {
     "path": "static.css",
-    "lines": 757,
+    "lines": 766,
     "role": "Static full-screen canvas styles (GitHub Pages variant).",
     "els": [],
     "kindNote": "stylesheet",
@@ -431,7 +431,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 172,
-    "role": "Generated from irvan-putra/vana @ 35bce79 by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ 0cfee73 by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
