@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ 1b880cc by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ e7a6140 by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "1b880cc364bbddad9a95b32e743ef1d8324bdd0b";
-export const CODE_COMMIT_SHORT = "1b880cc";
+export const CODE_COMMIT = "e7a61405b8fc3c4b75b402d746615571feff9404";
+export const CODE_COMMIT_SHORT = "e7a6140";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -224,7 +224,7 @@ export const COMPONENT_REFS: ComponentRef[] = [
 export const CODE_FILES: Record<string, CodeFile> = {
   "App.tsx": {
     "path": "App.tsx",
-    "lines": 1950,
+    "lines": 1948,
     "role": null,
     "els": [
       {
@@ -363,7 +363,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 151,
-    "role": "Generated from irvan-putra/vana @ 1b880cc by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ e7a6140 by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
