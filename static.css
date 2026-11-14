@@ -1,0 +1,711 @@
+/* Static full-screen canvas styles (GitHub Pages variant).
+   The --ds-* tokens and typography mirror the hosted Instinct Files runtime
+   (measured from the live hosted canvas) so the shared rc-* rules in
+   ../src/style.css render the same here as they do hosted.
+   Layout: the canvas IS the page - no page framing, no square viewport.
+   Navigation chrome (zoom buttons, Fit, minimap) is intentionally absent per
+   pan and pinch remain, controls return in a later iteration. */
+:root {
+    --ds-page: #fbfaf9;
+    --ds-hairline: #eae9ea;
+    --ds-ink: #251f21;
+    --ds-ink-2: #585254;
+    --ds-teal: #73a89a;
+    /* c4model.com element hues, sampled from the C4 reference
+       reference. Outlines pass WCAG 3:1 non-text vs --ds-page (system 5.43,
+       container 3.35, person 4.70, external 4.04, support 7.33); tag inks
+       pass 4.5:1 text contrast. Color is never the only cue: every element
+       also carries a «kind» tag, people carry a silhouette. */
+    --c4-system: #3066b7;
+    --c4-container: #438dd5;
+    --c4-component: #5d9bd8;
+    --c4-component-tint: #f0f6fc;
+    --c4-person: #4e7c43;
+    --c4-external: #c2601f;
+    --c4-system-ink: #3066b7;
+    --c4-container-ink: #2f6bab;
+    --c4-person-ink: #3c6233;
+    --c4-external-ink: #9c4a12;
+    --c4-system-tint: #e6eef8;
+    --c4-container-tint: #e9f2fb;
+    --c4-person-tint: #ebf2e7;
+    --c4-external-tint: #f8ebe0;
+}
+html, body, #root { margin: 0; height: 100%; }
+body {
+    font-family: "GT America", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    background: var(--ds-page);
+    color: #101113;
+    overflow: hidden;
+}
+h1, h2, h3 { font-family: Aime, Georgia, serif; font-weight: 400; }
+
+/* Page column: viewport flexes, the relationship key docks below it when
+   open, so the key can never cover the diagram. */
+.rc-page {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+}
+/* Full-window canvas, FreeForm/Miro-style. Overrides the square aspect-ratio
+   rule from ../src/style.css. */
+.rc-viewport {
+    flex: 1; min-height: 0;
+    aspect-ratio: auto;
+    border: none;
+    border-radius: 0;
+    position: relative;
+    /* the canvas owns every touch gesture on its surface: without this the
+       phone browser hijacks drags for its own scroll/zoom, cancels the
+       pointer stream, and the canvas appears stuck (actual Samsung report).
+       Scoped to the viewport so the sheet overlay and dock panels keep
+       normal touch scrolling. */
+    touch-action: none;
+}
+
+/* Live storage-state note, non-interactive. */
+.rc-status {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    z-index: 3; pointer-events: none;
+    max-width: 80%; padding: 4px 12px;
+    font-size: 12px; line-height: 18px; color: var(--ds-ink-2);
+    background: var(--ds-page); border: 1px solid var(--ds-hairline); border-radius: 999px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Focus overlay: full-screen readable card detail on phones (<560px).
+   Focus there opens this instead of zooming the canvas, so long cards stay
+   readable (real 16px text, 44px tap targets) and every file link and the
+   review action stay reachable by scrolling. */
+.rc-overlay {
+    position: fixed; inset: 0; z-index: 40;
+    background: var(--ds-page);
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
+.rc-overlay-head {
+    position: sticky; top: 0; z-index: 2;
+    padding: 10px 12px; background: var(--ds-page);
+    border-bottom: 1px solid var(--ds-hairline);
+}
+.rc-overlay-back {
+    min-height: 44px; padding: 0 16px;
+    font-size: 14px; font-weight: 600; color: var(--ds-ink);
+    background: var(--ds-page); border: 1px solid var(--ds-hairline); border-radius: 8px;
+    cursor: pointer;
+}
+.rc-overlay-body { max-width: 640px; margin: 0 auto; padding: 16px 16px 64px; }
+.rc-overlay .rc-card {
+    position: static; width: auto; padding: 0;
+    border: none; box-shadow: none; background: transparent;
+    font-size: 16px; line-height: 26px;
+}
+.rc-overlay .rc-card p, .rc-overlay .rc-card li { font-size: 16px; line-height: 26px; }
+.rc-overlay .rc-card code { font-size: 13px; }
+.rc-overlay .rc-focus { display: none; }
+.rc-overlay .rc-files a { display: inline-block; padding: 3px 0; }
+.rc-overlay .rc-reviewbtns button { min-height: 44px; font-size: 14px; }
+
+/* Canvas body text matches the hosted card typography. */
+.rc-card { font-size: 14px; line-height: 24px; }
+a, .rc-card a { color: var(--ds-ink); }
+.rc-card code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}
+
+/* Compact map at every zoom (one coherent
+   composition): on the map cards are compact title rows at ALL bands -
+   icon, title, mark badge. Bodies, file lists, findings and the review
+   buttons live in the reading overlay one tap away (the overlay is outside
+   .rc-world, so these rules never touch it). The concept level counter-
+   scales with --camz so titles stay readable instead of shrinking into
+   noise. Zooming in never changes geometry, only what is legible. */
+.rc-world .rc-card > :not(.rc-cardhead):not(.rc-badge) { display: none; }
+.rc-lo .rc-focus { display: none; }
+.rc-lo .rc-cardhead { cursor: pointer; }
+.rc-lo .rc-card h3 {
+    font-size: min(calc(13px / var(--camz)), 37px);
+    line-height: 1.15;
+}
+/* icon row drops out at the section level: its world height would push the
+   title past the reserved card slot at small zooms - same trade as the tag */
+.rc-lo .rc-icon { display: none; }
+/* tag drops out at the section level: at this distance it only collided
+   with neighbouring titles; the grouping it named is the context level */
+.rc-lo .rc-tag { display: none; }
+.rc-lo .rc-badge { font-size: min(calc(10px / var(--camz)), 44px); }
+/* Detail band: each container renders as a labeled frame holding its
+   section cards - C4 zoom-in-context nesting (the parent box stays the
+   frame of reference while its contents are revealed inside it). Frames
+   size by DOM flow, so real card heights can never overflow the frame. */
+.rc-nest-col {
+    position: absolute;
+    display: flex; flex-direction: column; gap: 60px;
+    align-items: flex-start;
+}
+.rc-frame {
+    position: relative; flex: none;
+    border: 2px solid var(--c4-container); border-radius: 18px;
+    background: rgba(30, 41, 38, 0.03);
+}
+.rc-frame-cards {
+    display: flex; flex-wrap: wrap; gap: 22px;
+    padding: 108px 28px 28px;
+}
+/* The base card style is position:absolute (free-form canvas); inside a
+   frame the cards flow in normal document order instead. */
+.rc-frame-cards > div { position: relative; flex: none; }
+.rc-frame-cards .rc-card { position: static; width: 100%; }
+.rc-frame-support { border-style: dashed; border-color: var(--ds-ink-2); }
+.rc-frame-label {
+    position: absolute; left: 18px; top: 8px;
+    display: flex; flex-direction: column; row-gap: 0.12em;
+    font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
+    color: var(--ds-ink);
+    font-size: calc(min(calc(15px / var(--camz)), 72px) * var(--lfscale, 1));
+    background: var(--c4-container-tint);
+    padding: min(calc(5px / var(--camz)), 26px) min(calc(14px / var(--camz)), 60px);
+    border-radius: min(calc(10px / var(--camz)), 44px);
+    box-sizing: border-box;
+}
+/* Containment at the section/container bands: the header block wraps
+   inside its frame (max-width + wrapping rows + per-frame font cap from
+   the renderer) instead of overflowing narrow frames. */
+.rc-grp .rc-frame-label, .rc-lo .rc-frame-label {
+    white-space: normal; max-width: calc(100% - 36px);
+}
+.rc-lo .rc-frame-label { font-size: calc(min(calc(15px / var(--camz)), 72px, var(--ftmax, 999px)) * var(--lfscale, 1)); }
+/* Header-fit: the absolute header must clear the
+   first card row at the card-visible bands; the renderer steps --lfscale
+   down until it does, and drops the sub/kind row if more room is needed. */
+.rc-frame-tight .rc-frame-row2 { display: none; }
+.rc-frame-tight .rc-frame-list { display: none; }
+.rc-grp .rc-frame-row1, .rc-grp .rc-frame-row2,
+.rc-lo .rc-frame-row1, .rc-lo .rc-frame-row2 { flex-wrap: wrap; }
+.rc-frame-support .rc-frame-label { background: #f4f3f1; }
+/* Header rows keep label + List and sub + kind chip side by side, so the
+   header block stays inside the frame's reserved top strip at every zoom. */
+.rc-frame-row1 { display: flex; align-items: center; gap: 0.6em; }
+.rc-frame-row2 { display: flex; align-items: center; gap: 0.7em; font-weight: 400; }
+.rc-frame-sub {
+    font-weight: 400; color: var(--ds-ink-2);
+    font-size: min(calc(11px / var(--camz)), 52px);
+}
+/* Supporting views (dynamic flow / deployment): same node/edge/badge
+   machinery as the structure bands, rendered at any zoom. */
+.rc-viewedges, .rc-viewlabels { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
+.rc-viewnodes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.rc-viewnodes .rc-grpnode { pointer-events: auto; }
+.rc-viewedges polyline {
+    stroke: var(--ds-teal);
+    stroke-width: calc(2.5px / var(--camz));
+    opacity: 0.55;
+}
+/* Section level: each card group is owned by its C4 container label;
+   the old free-floating concept edges are gone */
+.rc-seclabel {
+    position: absolute; z-index: 2; pointer-events: none;
+    font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
+    color: var(--ds-ink-2);
+    font-size: min(calc(13px / var(--camz)), 64px);
+}
+
+/* Container level (C4): section cards and their edges give way to one node
+   per runnable container (plus externals and a supporting cluster) with
+   labeled relationships. Node text counter-scales with --camz like the
+   section titles do, so the overview stays readable at phone fit zoom. */
+.rc-groups { display: none; }
+.rc-gedges { display: none; }
+.rc-grp .rc-world .rc-card { display: none; }
+.rc-grp .rc-groups { display: block; }
+.rc-grp .rc-gedges { display: block; }
+.rc-gedges, .rc-glabels, .rc-syslabels { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
+.rc-groups, .rc-sysnodes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.rc-groups .rc-grpnode, .rc-sysnodes .rc-grpnode { pointer-events: auto; }
+.rc-glabels, .rc-syslabels { display: none; }
+.rc-grp .rc-glabels { display: block; }
+/* System band stays sparse: no numbered badges
+   there - stub edges converge on the marker cluster and badges pile up;
+   numbering returns at the container band, the key lists every relation. */
+.rc-grp .rc-gedges > path {
+    stroke: var(--ds-teal);
+    stroke-width: calc(1.8px / var(--camz));
+    opacity: 0.55;
+}
+.rc-gedges > path.rc-rel-dash {
+    stroke: var(--ds-ink-2);
+    stroke-dasharray: calc(10px / var(--camz)) calc(6px / var(--camz));
+    opacity: 0.65;
+}
+.rc-rel-badge circle, .rc-rel-badge rect {
+    fill: var(--ds-page);
+    stroke: var(--ds-teal);
+    stroke-width: calc(1.5px / var(--camz));
+}
+.rc-rel-badge.rc-rel-badge-dash circle, .rc-rel-badge.rc-rel-badge-dash rect {
+    stroke: var(--ds-ink-2);
+    stroke-dasharray: calc(3.5px / var(--camz)) calc(2.5px / var(--camz));
+}
+.rc-rel-badge text {
+    fill: var(--ds-ink-2);
+    font-size: calc(10px / var(--camz));
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+/* authored container-band pills are world-sized (440x110/440x76 world px),
+   so their text uses a fixed world font instead of screen-constant scaling */
+.rc-rel-badge.rc-rel-badge-auth text {
+    font-size: 38px;
+}
+/* Bottom navigation dock: a compact bar that never covers the canvas.
+   The key/menu open as docked panels above it (see .rc-legend/.rc-menu),
+   shrinking the viewport rather than overlaying the diagram. */
+.rc-dockbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 14px;
+    background: #fbfaf9; border-top: 1px solid var(--ds-hairline);
+}
+.rc-dockchip {
+    padding: 5px 12px;
+    background: var(--ds-page);
+    border: 1px solid var(--ds-hairline); border-radius: 999px;
+    font: inherit; font-size: 11px; color: var(--ds-ink-2);
+    cursor: pointer;
+}
+.rc-dockchip-on { border-color: var(--ds-teal); color: var(--ds-ink); }
+.rc-menu {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 8px 14px;
+    max-height: 42dvh; overflow-y: auto;
+    background: #fbfaf9; border-top: 1px solid var(--ds-hairline);
+    font-size: 11px; color: var(--ds-ink-2);
+}
+.rc-menu-head { font-weight: 700; letter-spacing: 0.02em; color: var(--ds-ink); }
+.rc-menu-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-menu-btn {
+    padding: 5px 10px;
+    background: var(--ds-page);
+    border: 1px solid var(--ds-hairline); border-radius: 8px;
+    font: inherit; font-size: 11px; color: var(--ds-ink-2);
+    cursor: pointer; text-align: left;
+}
+.rc-menu-on { border-color: var(--ds-teal); color: var(--ds-ink); }
+/* The key docks below the viewport as a page band, never over the canvas. */
+.rc-legend {
+    display: flex;
+    flex-direction: column; gap: 3px;
+    padding: 8px 14px;
+    max-height: 42dvh; overflow-y: auto;
+    background: #fbfaf9;
+    border-top: 1px solid var(--ds-hairline);
+    font-size: 10.5px; line-height: 1.25; color: var(--ds-ink-2);
+}
+.rc-legend-item { display: flex; align-items: center; gap: 8px; }
+.rc-legend-shapes { flex-wrap: wrap; row-gap: 4px; }
+.rc-legend-key { margin-top: 2px; font-size: 10px; }
+.rc-legend-line {
+    display: inline-block; width: 24px; height: 0; flex: none;
+    border-top: 2.5px solid var(--ds-teal);
+}
+.rc-legend-line.rc-legend-dash { border-top: 2.5px dashed var(--ds-ink-2); }
+.rc-legend-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; flex: none;
+    border: 1.5px solid var(--ds-teal); border-radius: 50%;
+    font-size: 9.5px; color: var(--ds-ink-2);
+}
+.rc-legend-num.rc-legend-num-dash { border-style: dashed; border-color: var(--ds-ink-2); }
+
+/* System context level (furthest out, C4 system landscape): people + the
+   intodo system + external systems. */
+.rc-sysnodes { display: none; }
+.rc-sysedges { display: none; }
+.rc-sys .rc-world .rc-card,
+.rc-sys .rc-groups, .rc-sys .rc-gedges, .rc-sys .rc-glabels { display: none; }
+.rc-sys .rc-sysnodes { display: block; }
+.rc-sys .rc-sysedges { display: block; }
+.rc-sysedges { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
+.rc-sys .rc-sysedges polyline {
+    stroke: var(--ds-teal);
+    stroke-width: calc(2.5px / var(--camz));
+    opacity: 0.55;
+}
+.rc-sysedges polyline.rc-rel-dash {
+    stroke: var(--ds-ink-2);
+    stroke-dasharray: calc(10px / var(--camz)) calc(6px / var(--camz));
+    opacity: 0.65;
+}
+.rc-grpnode {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+    gap: calc(3px / var(--camz));
+    padding: calc(9px / var(--camz)) calc(14px / var(--camz));
+    background: var(--ds-page);
+    border: calc(1.5px / var(--camz)) solid var(--ds-teal);
+    border-radius: calc(12px / var(--camz));
+    font-family: inherit; cursor: pointer;
+    white-space: normal; text-align: center;
+    box-sizing: border-box; width: calc(150px / var(--camz));
+}
+.rc-grplabel {
+    font-family: Aime, Georgia, serif; color: var(--ds-ink);
+    font-size: calc(13.5px / var(--camz)); line-height: 1.15;
+}
+.rc-grpcount {
+    color: var(--ds-ink-2);
+    font-size: calc(10px / var(--camz));
+}
+/* C4 node kinds: tinted body + kind-hue border make each kind a clear color
+   area; a filled kind chip names it so color is not the only cue. External
+   systems get sharp corners; people get a filled silhouette. */
+.rc-node-container {
+    background: var(--c4-container-tint);
+    border-color: var(--c4-container);
+}
+.rc-node-external {
+    background: var(--c4-external-tint);
+    border-color: var(--c4-external);
+    border-radius: calc(4px / var(--camz));
+    cursor: default;
+}
+.rc-node-ext {
+    background: var(--c4-external-tint);
+    border-color: var(--c4-external);
+    border-radius: calc(4px / var(--camz));
+    cursor: default;
+}
+.rc-node-support {
+    border-style: dashed;
+    border-color: var(--ds-ink-2);
+}
+.rc-node-person {
+    background: var(--c4-person-tint);
+    border-color: var(--c4-person);
+    cursor: default;
+}
+.rc-personicon {
+    width: calc(24px / var(--camz)); height: calc(31px / var(--camz));
+    flex: none;
+}
+.rc-personicon circle, .rc-personicon path {
+    fill: var(--c4-person); stroke: none;
+}
+.rc-kindtag {
+    font-size: calc(9.5px / var(--camz)); line-height: 1.1;
+    letter-spacing: 0.04em;
+    padding: calc(2px / var(--camz)) calc(7px / var(--camz));
+    border-radius: calc(4px / var(--camz));
+    color: #fff;
+}
+.rc-kindtag-container { background: var(--c4-container); color: var(--ds-ink); }
+.rc-kindtag-system { background: var(--c4-system); }
+.rc-kindtag-external { background: var(--c4-external-ink); }
+.rc-kindtag-person { background: var(--c4-person); }
+.rc-kindtag-support {
+    background: var(--ds-page); color: var(--ds-ink-2);
+    border: calc(1.5px / var(--camz)) dashed var(--ds-ink-2);
+}
+.rc-frame-kind {
+    font-weight: 400;
+    font-size: min(calc(10px / var(--camz)), 48px);
+}
+.rc-kindchip {
+    display: inline-block; padding: 0 6px; margin: 0 1px;
+    border: 1.5px solid; border-radius: 4px;
+}
+.rc-kindchip-container { background: var(--c4-container); border-color: var(--c4-container); color: var(--ds-ink); }
+.rc-kindchip-system { background: var(--c4-system); border-color: var(--c4-system); color: #fff; border-radius: 8px; }
+.rc-kindchip-external { background: var(--c4-external-ink); border-color: var(--c4-external-ink); color: #fff; }
+.rc-kindchip-person { background: var(--c4-person); border-color: var(--c4-person); color: #fff; }
+.rc-kindchip-support { border-color: var(--ds-ink-2); color: var(--ds-ink-2); border-style: dashed; }
+.rc-kindchip-person .rc-personicon { width: 9px; height: 12px; vertical-align: -1px; margin-right: 4px; }
+.rc-kindchip-person .rc-personicon circle, .rc-kindchip-person .rc-personicon path { fill: #fff; }
+.rc-node-system {
+    background: var(--c4-system-tint);
+    border-color: var(--c4-system);
+}
+.rc-node-system .rc-grplabel { color: var(--ds-ink); }
+.rc-node-system .rc-grpcount { color: var(--ds-ink-2); }
+
+/* Selection vs pan: while a pan/pinch gesture is recognized (rc-panning),
+   selection is suppressed so a drag cannot pan AND paint selection at once
+   (live writer finding on e331264). Idle content stays selectable. */
+.rc-viewport.rc-panning, .rc-viewport.rc-panning * {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Group sheet (phones): a tapped group opens as a readable list of its
+   sections; a row opens that section's focus overlay. */
+.rc-gsheet-title { margin: 4px 0 2px; font-size: 22px; }
+.rc-gsheet-sub { margin: 0 0 12px; font-size: 13px; color: var(--ds-ink-2); }
+.rc-grow {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    min-height: 52px; padding: 8px 12px; margin-bottom: 8px;
+    font: inherit; text-align: left; cursor: pointer;
+    background: var(--ds-page); border: 1px solid var(--ds-hairline); border-radius: 10px;
+}
+.rc-growtext { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.rc-growtitle { font-size: 16px; line-height: 22px; color: var(--ds-ink); font-weight: 600; }
+.rc-growtag { font-size: 11px; color: var(--ds-ink-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.rc-grow .rc-icon { font-size: 20px; }
+
+/* Diataxis purpose chip in card headers: every card names what it is for. */
+.rc-purpose {
+    margin-top: 2px;
+    display: inline-block; padding: 1px 8px;
+    font-size: 10px; line-height: 16px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ds-ink-2);
+    border: 1px solid var(--ds-hairline); border-radius: 999px;
+}
+.rc-lo .rc-purpose { display: none; }
+
+/* Findings capture: the reviewer's own notes, browser-local, never published. */
+.rc-findings {
+    width: 100%; box-sizing: border-box;
+    font: inherit; font-size: 13px; line-height: 20px;
+    padding: 8px 10px; resize: vertical; min-height: 64px;
+    color: var(--ds-ink);
+    background: var(--ds-page);
+    border: 1px solid var(--ds-hairline); border-radius: 8px;
+}
+.rc-findings:focus { outline: 2px solid var(--ds-ink-2); outline-offset: 0; }
+
+/* Zoom-band purpose caption, non-interactive, top-left (legend stays bottom-left). */
+.rc-bandcap {
+    /* docked caption, never on the canvas: as a bottom-right overlay it
+       covered the external nodes and labels where a full-map fit places
+       them. Lives in the dockbar, wraps to its own row on narrow phones. */
+    position: static; pointer-events: none;
+    flex: 1 1 100%; order: 9; text-align: center;
+    padding: 4px 12px;
+    font-size: 12px; line-height: 18px; color: var(--ds-ink-2);
+    background: var(--ds-page); border: 1px solid var(--ds-hairline); border-radius: 16px;
+    white-space: normal; overflow: hidden; min-height: 44px; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* per-frame explicit sheet entry on phones: the sheet complements the
+   nested frame (long card lists scroll better as a list) instead of
+   replacing it as the container tap's outcome */
+.rc-frame-list {
+    position: relative;
+    z-index: 5;
+    flex: none;
+    font: inherit;
+    font-size: min(calc(11px / var(--camz)), 48px);
+    padding: 0.25em 0.8em;
+    border-radius: 999px;
+    border: 2px solid var(--line, #cfd8d3);
+    background: #fff;
+    color: var(--ds-ink);
+    cursor: pointer;
+}
+
+/* Stable world map: the same frames render at
+   every zoom band. Collapsed to their label at container/system bands,
+   chip-high cards at the section band, full cards in detail - position and
+   identity never change with zoom. */
+.rc-grp .rc-frame-cards, .rc-sys .rc-frame-cards { display: none; }
+.rc-grp .rc-frame, .rc-sys .rc-frame { cursor: pointer; }
+/* Frames reserve their full detail bounds at every zoom; a card that renders
+   taller than its estimate spills into the frame gap instead of shifting the
+   map. */
+.rc-frame { overflow: visible; }
+/* Look-up band cards keep the approved compact shape - the title only,
+   summaries stay in the card sheet. The slot is a fixed world box (frames
+   reserve their detail bounds at every zoom), so the cap is world-constant
+   and the title font caps at 37 world px: a three-line title then fits the
+   deepest slots and two-line cards fit the shallow ones, with the clamp
+   guaranteeing nothing ever cuts mid-line. */
+.rc-lo .rc-card { max-height: 128px; overflow: hidden; }
+.rc-lo .rc-card h3 {
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Component + code bands (generated facts, gen_code.py): attached
+   verification/meta cards keep the section band's compact shape. */
+.rc-band-comp .rc-card { max-height: 128px; overflow: hidden; }
+.rc-band-comp .rc-card h3 {
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: min(calc(13px / var(--camz)), 37px);
+    line-height: 1.15;
+}
+.rc-band-comp .rc-icon { display: none; }
+.rc-band-comp .rc-tag { display: none; }
+.rc-band-comp .rc-purpose { display: none; }
+.rc-band-comp .rc-focus { display: none; }
+.rc-band-comp .rc-badge { font-size: min(calc(10px / var(--camz)), 44px); }
+.rc-band-comp .rc-frame-label { font-size: calc(min(calc(15px / var(--camz)), 72px, var(--ftmax, 999px)) * var(--lfscale, 1)); }
+.rc-band-comp .rc-frame-row1, .rc-band-comp .rc-frame-row2,
+.rc-band-comp .rc-frame-row1, .rc-band-comp .rc-frame-row2 { flex-wrap: wrap; }
+.rc-band-comp .rc-frame-label { white-space: normal; max-width: calc(100% - 36px); line-height: 1.15; padding-top: min(calc(3px / var(--camz)), 14px); padding-bottom: min(calc(3px / var(--camz)), 14px); }
+.rc-frame-label .rc-kindchip-component, .rc-frame-label .rc-frame-pin { font-size: min(calc(7px / var(--camz)), 20px); }
+
+/* Component boxes: C4 component style, same counter-scaled text pattern
+   as cards - screen-constant sizes capped in world units. */
+.rc-comp {
+    position: relative; flex: none; box-sizing: border-box;
+    border: 2px solid var(--c4-component); border-radius: 14px;
+    background: var(--c4-component-tint);
+    padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.rc-comp-tile { overflow: hidden; padding: 6px 10px; gap: 4px; }
+.rc-comp-tile .rc-comp-name { line-height: 1.1; }
+.rc-comp-tile .rc-comp-flag { font-size: calc(min(calc(9px / var(--camz)), 40px) * var(--tnscale, 1)); }
+.rc-comp-tile .rc-comp-cornertags { position: static; display: inline; }
+.rc-comp-tile .rc-comp-cornertags .rc-comp-flag { margin-left: 6px; }
+.rc-comp-tile .rc-comp-name { font-size: calc(min(calc(13px / var(--camz)), 37px) * var(--tnscale, 1)); }
+.rc-comp-focus {
+    position: absolute; top: 0; left: 0; z-index: 60; height: auto;
+    background: var(--c4-component-tint);
+    box-shadow: 0 calc(8px / var(--camz)) calc(30px / var(--camz)) rgba(15, 40, 80, 0.25);
+}
+.rc-comp-shared { border-style: dashed; }
+.rc-comp-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rc-comp-name { font-weight: 700; font-size: min(calc(13px / var(--camz)), 37px); line-height: 1.15; }
+.rc-kindchip-component { background: var(--c4-component); border-color: var(--c4-component); color: #fff; font-size: min(calc(9px / var(--camz)), 30px); }
+.rc-comp-flag { font-size: min(calc(9px / var(--camz)), 30px); color: var(--ds-ink-2); border: calc(1.5px / var(--camz)) dashed var(--ds-ink-2); border-radius: 4px; padding: 0 6px; }
+.rc-comp-tech { font-size: min(calc(10px / var(--camz)), 33px); color: var(--ds-ink-2); }
+.rc-comp-resp { font-size: min(calc(10px / var(--camz)), 33px); line-height: 1.35; }
+.rc-comp-els, .rc-cfile-els { display: flex; flex-wrap: wrap; gap: 5px; }
+.rc-comp-el { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: min(calc(9px / var(--camz)), 30px); background: #fff; border: 1px solid var(--ds-hairline); border-radius: 4px; padding: 0 5px; }
+.rc-comp-el em { font-style: normal; color: var(--ds-ink-2); }
+.rc-comp-more { color: var(--ds-ink-2); }
+.rc-comp-ref { font-size: min(calc(9.5px / var(--camz)), 31px); }
+.rc-comp-via { display: block; color: var(--ds-ink-2); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.rc-comp-secs { font-size: min(calc(9px / var(--camz)), 30px); color: var(--ds-ink-2); }
+.rc-frame-pin { font-size: min(calc(9px / var(--camz)), 40px); color: var(--ds-ink-2); border: 1px solid var(--ds-hairline); border-radius: 999px; padding: 0 8px; }
+.rc-comp-files { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; border-top: 1px solid var(--ds-hairline); padding-top: 8px; }
+.rc-cfile { background: #fff; border: 1px solid var(--ds-hairline); border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 4px; }
+.rc-cfile-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.rc-cfile-name { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 600; font-size: min(calc(10px / var(--camz)), 33px); }
+.rc-cfile-lines { color: var(--ds-ink-2); font-size: min(calc(9px / var(--camz)), 30px); }
+.rc-cfile-refs { font-size: min(calc(9px / var(--camz)), 30px); color: var(--ds-ink-2); }
+.rc-cfile-role { font-size: min(calc(9px / var(--camz)), 30px); line-height: 1.3; }
+/* Stable-map nodes: at the container/system bands node boxes and labels are
+   WORLD-sized, so the map zooms like a map - positions and sizes fixed in
+   the world, readable when you zoom in, complete when you zoom out.
+   Maps-style legibility: labels get a minimum
+   on-screen size floor (max of world size and inverse-zoom floor), and
+   details too small to read at the band - sub text, kind chips, List
+   buttons - are hidden instead of rendering as noise. Placement and shape
+   never change: the same world boxes, only visibility is zoom-aware. */
+.rc-grp .rc-grpnode, .rc-sys .rc-grpnode {
+    width: 300px; padding: 22px 26px; gap: 8px;
+    border-width: 3px; border-radius: 28px;
+}
+.rc-grp .rc-grplabel { font-size: max(34px, min(calc(10px / var(--camz)), var(--nftmax, 999px))); }
+.rc-grp .rc-grpcount, .rc-sys .rc-grpcount { font-size: 24px; }
+/* kind cue scales with the band's world-fixed text, not against it */
+.rc-grp .rc-kindtag, .rc-sys .rc-kindtag {
+    font-size: 20px; padding: 5px 13px; border-radius: 8px;
+}
+/* Sub text and kind chips are illegible at both far bands: hide them there.
+   Kinds stay cued by color/border/shape and the docked key's shape legend. */
+.rc-grp .rc-grpcount, .rc-grp .rc-kindtag, .rc-sys .rc-kindtag { display: none; }
+.rc-grp .rc-kindtag-support, .rc-sys .rc-kindtag-support { border-width: 2.5px; }
+.rc-grp .rc-personicon, .rc-sys .rc-personicon { width: 52px; height: 67px; }
+.rc-grp .rc-node-external, .rc-sys .rc-node-external,
+.rc-grp .rc-node-ext, .rc-sys .rc-node-ext { border-radius: 9px; }
+/* Container band: frame titles are the primary labels - floored at a
+   readable on-screen size, capped per frame (--ftmax, set by the renderer
+   from the frame width and the title's longest word) so a wrapped title
+   can never overflow its frame; sub line, kind chip and List button hide
+   as too small; the item count stays as the far-zoom fullness cue. */
+.rc-grp .rc-frame-label {
+    font-size: calc(max(40px, min(calc(13px / var(--camz)), var(--ftmax, 999px))) * var(--lfscale, 1));
+    padding: 12px 26px; border-radius: 18px;
+    line-height: 1.15;
+}
+/* System band = a C4 System Context diagram (with
+   the c4model.com sample as reference): the system is ONE compact box and
+   the container breakdown does not show at this level, so the frames hide
+   entirely instead of shrinking to empty outlines; zooming in reveals the
+   containers in place. The frames are also tap-through there: a collapsed
+   block must not intercept the pan/zoom gesture. */
+.rc-sys .rc-frame, .rc-sys .rc-frame-label { display: none; }
+/* Collapsed-band hit-through: the nest column is a pure layout strip, so
+   it must never swallow taps itself - at the system band the whole column
+   falls through to the boundary button beneath, so tapping the system box
+   enters it; at other bands frames/cards stay
+   interactive. */
+.rc-nest-col { pointer-events: none; }
+.rc-frame { pointer-events: auto; }
+.rc-sys .rc-frame { pointer-events: none; }
+.rc-grp .rc-frame-sub, .rc-sys .rc-frame-sub,
+.rc-grp .rc-frame-kind, .rc-sys .rc-frame-kind,
+.rc-grp .rc-frame-list, .rc-sys .rc-frame-list { display: none; }
+/* System band (C4 System Context style): the
+   people/external systems are real labeled boxes around the one fixed
+   system footprint. Labels floor at a readable on-screen size like the
+   boundary label, capped so extreme zoom-out keeps boxes proportional;
+   kinds stay cued by color/border/shape and the docked key's legend. The
+   boundary keeps its C4 block (name, description, kind tag) in the top
+   strip, clear of the frames. */
+.rc-sys .rc-grpnode .rc-grplabel { font-size: max(34px, min(calc(12px / var(--camz)), 110px)); }
+.rc-sys .rc-node-boundary .rc-grplabel { background: transparent; padding: 0; }
+.rc-sys .rc-node-boundary .rc-grpcount { display: block; font-size: 34px; }
+.rc-sys .rc-node-boundary .rc-kindtag { display: inline-block; font-size: 30px; }
+.rc-node-boundary { border-style: dashed; border-color: var(--c4-system); background: transparent; }
+/* The system boundary box's label sits in the top strip, clear of the frames. */
+.rc-node-boundary { justify-content: flex-start; align-items: flex-start; padding: 24px 32px; }
+/* Kill Chrome Android font boosting inside the canvas: it inflated nowrap
+   frame labels ~2x past their computed size (computed 20px, painted ~40px),
+   breaking the inverse-zoom label sizing. */
+.rc-world, .rc-world * { -webkit-text-size-adjust: none; text-size-adjust: none; }
+/* Far-zoom cue: item count inside a frame's reserved bounds, so a zoomed-out
+   frame reads as a full container, not an empty box. Hidden at near bands;
+   world-sized at far bands like the rest of the label block. */
+.rc-frame-count { display: none; }
+.rc-grp .rc-frame-count { display: block; font-size: max(24px, calc(9px / var(--camz))); font-weight: 400; color: var(--ds-ink-2); margin-top: 6px; }
+/* Continuity across the sys->grp threshold (one map, reviewer note 14
+   Nov): the boundary is ONE fixed world rect at every band. At the system
+   band it is the system box; at the container band the same rect shows as
+   the dashed outline around its frames. Tap-through there: the frames
+   stay the container band's tap targets; label and tags stay hidden, the
+   dock caption names the level. */
+.rc-grp .rc-sysnodes { display: block; }
+.rc-grp .rc-sysnodes .rc-grpnode:not(.rc-node-boundary) { display: none; }
+.rc-grp .rc-node-boundary {
+    pointer-events: none; background: transparent;
+    justify-content: flex-start; align-items: center;
+}
+.rc-grp .rc-node-boundary .rc-grpcount, .rc-grp .rc-node-boundary .rc-kindtag, .rc-grp .rc-node-boundary .rc-grplabel { display: none; }
+/* Sub lines on the people/external boxes are illegible texture at system-
+   band zooms (24px world < 3px screen): hide them there; kinds stay cued
+   by color/border/shape and the docked key's legend. */
+.rc-sys .rc-sysnodes .rc-grpcount { display: none; }
+.rc-sys .rc-node-boundary .rc-grpcount { display: block; font-size: 34px; }
+
+/* Map/territory rule: nothing inside the map is clickable -
+   labels and details only appear or hide with zoom; every action (reading,
+   review marks, findings, links, navigation) lives in the dock menu and the
+   reading sheet outside the territory. */
+.rc-world .rc-card, .rc-world .rc-card *, .rc-world .rc-frame,
+.rc-world .rc-groups .rc-grpnode, .rc-world .rc-sysnodes .rc-grpnode,
+.rc-world .rc-viewnodes .rc-grpnode { pointer-events: none !important; }
+.rc-world .rc-card { overflow: hidden; }
+/* Detail LOD on the SAME fixed card shape: at the near bands the summary
+   appears under the head, clamped; the full text and all controls stay in
+   the reading sheet. At the deepest band the head compacts to one line so
+   the summary gets up to four readable lines inside the fixed card. */
+.rc-band-detail .rc-world .rc-card > p:first-of-type {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; margin: 2px 10px 0; font-size: min(calc(11px / var(--camz)), 40px);
+    /* em-based: the fixed 24px card line-height clipped the counter-scaled font */
+    line-height: 1.25;
+}
+.rc-band-detail .rc-world .rc-card > p:first-of-type { -webkit-line-clamp: 4; }
+.rc-band-detail .rc-card .rc-tag, .rc-band-detail .rc-card .rc-purpose { display: none; }
+.rc-band-detail .rc-card h3, .rc-grp .rc-frame-title {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.rc-grp .rc-frame-row1 { flex-wrap: nowrap; }
+.rc-grp .rc-frame-title { display: block; min-width: 0; }
+

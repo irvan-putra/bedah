@@ -1,0 +1,108 @@
+# Build the review canvas and deploy it to GitHub Pages from an artifact,
+# on every canvas change. Carried over from intodo's review-pages.yml with
+# the same two-job security shape; the gh-pages staging step is gone because
+# this repo's whole site IS the canvas, so the artifact deploys at the root.
+#
+#   build  - holds ONLY contents: read. Dependency install (npm ci
+#            --ignore-scripts, locked to package-lock.json) and esbuild run
+#            here, so no dependency lifecycle script or build tool ever
+#            executes in a job holding Pages/OIDC privileges.
+#   deploy - the ONLY job holding pages: write / id-token: write, bound to
+#            the github-pages environment. Runs no dependency or build
+#            tooling: deploys the artifact, then verifies the live URL
+#            serves the exact build bytes (green = LIVE, not just deployed).
+#
+# REQUIRED ONE-TIME SETTING (repo owner, in the GitHub UI): set the Pages
+# source to "GitHub Actions". No token or secret is added.
+
+name: publish review canvas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'App.tsx'
+      - 'main.tsx'
+      - 'index.html'
+      - 'static.css'
+      - 'files-shim.tsx'
+      - 'src/**'
+      - 'tools/**'
+      - 'build.sh'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  LIVE_URL: https://vanipy.com/vana/
+
+jobs:
+  build:
+    # Manual dispatch publishes main only, never a side branch.
+    if: github.ref_name == 'main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Build the review bundle (locked deps, no lifecycle scripts)
+        run: sh build.sh "$PWD/dist"
+
+      - name: Upload the site as the Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: dist
+
+      - name: Upload the built dist for the live-bytes check
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: review-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    # Deploy-only: the single privileged job, no dependency or build tooling.
+    needs: build
+    if: github.ref_name == 'main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://vanipy.com/vana/
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+      - name: Check out the verifier script
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: |
+            tools
+
+      - name: Download the built dist
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: review-dist
+          path: dist
+
+      - name: Verify the live page serves the exact build bytes
+        run: sh tools/verify_live.sh "$LIVE_URL" "$PWD/dist" 300
