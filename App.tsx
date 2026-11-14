@@ -1421,11 +1421,11 @@ const compTileSize = (gid: string, n: number) => {
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
         'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
-        'p-owner-c-gen': { pts: [[1170, 330], [1750, 330], [1750, 671], [1930, 671]], pill: [1460, 285], lines: ['runs by hand after', 'source changes'], hw: 165 },
-        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1720, 285], lines: ['reads + marks', '(localStorage only)'], hw: 170 },
+        'p-owner-c-gen': { pts: [[1170, 330], [1750, 330], [1750, 671], [1930, 671]], pill: [1810, 462], lines: ['runs by hand after', 'source changes'], hw: 150 },
+        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1480, 470], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
-        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1310, 455], lines: ['writes + reviews'] },
-        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [1910, 505], lines: ['reads + marks', '(local only)'] },
+        'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1120, 455], lines: ['writes + reviews'], hw: 120 },
+        'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: ['reads + marks', '(local only)'], hw: 130 },
         'x-github-x-gha': { pts: [[3260, 1325], [3260, 975]], pill: [3030, 1130], lines: ['push to main', 'triggers'], hw: 150 },
         'x-gha-x-github': { pts: [[3340, 975], [3340, 1325]], pill: [3520, 1130], lines: ['builds + deploys', 'the Pages site'], hw: 170 },
     };
