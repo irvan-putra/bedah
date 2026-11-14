@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ 0cfee73 by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ 7762086 by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "0cfee730f60e2570ff127e4921838e621909901f";
-export const CODE_COMMIT_SHORT = "0cfee73";
+export const CODE_COMMIT = "77620869aaca2b1410a80e452ec024dacb5f853d";
+export const CODE_COMMIT_SHORT = "7762086";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -431,7 +431,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 172,
-    "role": "Generated from irvan-putra/vana @ 0cfee73 by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ 7762086 by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
