@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ e5f9610 by gen_sections.py - do not hand-edit.
-export const COMMIT = "e5f9610196abb03ba0c3f0462c015747a1042107";
-export const COMMIT_SHORT = "e5f9610";
+// Generated from irvan-putra/vana @ 3b209d2 by gen_sections.py - do not hand-edit.
+export const COMMIT = "3b209d25bf50792c881f2808a956661817f73215";
+export const COMMIT_SHORT = "3b209d2";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
