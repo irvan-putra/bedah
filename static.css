@@ -433,7 +433,7 @@ a, .rc-card a { color: var(--ds-ink); }
 /* Far-zoom tiers (Maps-style declutter: keep names and structure, hide
    what is too small to read; everything hidden here is one zoom-in away
    and every relation stays listed in the docked key).
-   - Container band, z<0.28: node sub-labels and kind tags (the renderer
+   - Container band, z<0.16: node sub-labels and kind tags (the renderer
      also swaps label pills for edge-only lines there).
    - System band, z<0.12: sub-labels and the system boundary label. */
 .rc-grp.rc-far .rc-grpcount, .rc-grp.rc-far .rc-kindtag,
