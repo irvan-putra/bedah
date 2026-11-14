@@ -1235,15 +1235,36 @@ const compTileSize = (gid: string, n: number) => {
 
     // wheel zoom toward the cursor, endless-paper style: trackpad pinch
     // arrives as ctrl+wheel, plain wheel zooms too; zoom is continuous
-    // instead of hidden behind buttons
+    // instead of hidden behind buttons. A fast wheel/pinch flick fires
+    // hundreds of events; applying one setCam + localStorage persist per
+    // event backed the render queue up for minutes on phones (the
+    // extreme-zoom "crash" symptom). Events coalesce into one camera
+    // update per animation frame: the zoom factor is a sum of deltas, so
+    // the end state is identical, and the persist is debounced to when
+    // the burst settles (same as pan, which saves at gesture end).
+    const camLive = useRef(cam);
+    camLive.current = cam;
+    const wheelAcc = useRef<{ d: number; x: number; y: number; ctrl: boolean; raf: number; timer: number }>({ d: 0, x: 0, y: 0, ctrl: false, raf: 0, timer: 0 });
     const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
         viewTouched.current = true;
-        const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.008 : 0.0015));
-        const z = clampZ(cam.z * f);
-        const p = { x: e.clientX, y: e.clientY };
-        const mw = toWorld(p, cam);
-        const c = clampCam({ x: mw.x - (p.x - evp.w / 2) / z, y: mw.y - (p.y - evp.h / 2) / z, z });
-        setCam(c); persist(c, pos, reviews);
+        const w = wheelAcc.current;
+        w.d += e.deltaY;
+        w.x = e.clientX; w.y = e.clientY; w.ctrl = e.ctrlKey;
+        if (w.raf) return;
+        const evp0 = evp;
+        w.raf = requestAnimationFrame(() => {
+            w.raf = 0;
+            const cam0 = camLive.current;
+            const f = Math.exp(-w.d * (w.ctrl ? 0.008 : 0.0015));
+            w.d = 0;
+            const z = clampZ(cam0.z * f);
+            const p = { x: w.x, y: w.y };
+            const mw = toWorld(p, cam0);
+            const c = clampCam({ x: mw.x - (p.x - evp0.w / 2) / z, y: mw.y - (p.y - evp0.h / 2) / z, z });
+            setCam(c);
+            window.clearTimeout(w.timer);
+            w.timer = window.setTimeout(() => persist(camLive.current, pos, reviews), 400);
+        });
     };
 
     const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
