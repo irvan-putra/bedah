@@ -437,6 +437,7 @@ a, .rc-card a { color: var(--ds-ink); }
      also swaps label pills for edge-only lines there).
    - System band, z<0.12: sub-labels and the system boundary label. */
 .rc-grp.rc-far .rc-grpcount, .rc-grp.rc-far .rc-kindtag,
+.rc-grp.rc-far .rc-personicon,
 .rc-grp.rc-far .rc-frame-sub, .rc-grp.rc-far .rc-frame-kind { display: none; }
 .rc-sys.rc-sysfar .rc-grpcount, .rc-sys.rc-sysfar .rc-node-boundary .rc-grplabel,
 .rc-sys.rc-sysfar .rc-node-boundary .rc-grpcount { display: none; }
