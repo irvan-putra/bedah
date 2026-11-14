@@ -1238,32 +1238,32 @@ const compTileSize = (gid: string, n: number) => {
     // instead of hidden behind buttons. A fast wheel/pinch flick fires
     // hundreds of events; applying one setCam + localStorage persist per
     // event backed the render queue up for minutes on phones (the
-    // extreme-zoom "crash" symptom). Events coalesce into one camera
-    // update per animation frame: the zoom factor is a sum of deltas, so
-    // the end state is identical, and the persist is debounced to when
-    // the burst settles (same as pan, which saves at gesture end).
+    // extreme-zoom "crash" symptom). Coalescing defers only the RENDER:
+    // every event still applies its own factor, clamp and cursor anchor
+    // to a pending camera in order (identical math to sequential
+    // application, including direction reversals at the min/max bounds),
+    // and one setCam per animation frame commits the result. The persist
+    // is debounced to when the burst settles (same as pan, which saves
+    // at gesture end).
     const camLive = useRef(cam);
     camLive.current = cam;
-    const wheelAcc = useRef<{ d: number; x: number; y: number; ctrl: boolean; raf: number; timer: number }>({ d: 0, x: 0, y: 0, ctrl: false, raf: 0, timer: 0 });
+    const wheelPending = useRef<Cam | null>(null);
+    const wheelRaf = useRef(0);
+    const wheelTimer = useRef(0);
     const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
         viewTouched.current = true;
-        const w = wheelAcc.current;
-        w.d += e.deltaY;
-        w.x = e.clientX; w.y = e.clientY; w.ctrl = e.ctrlKey;
-        if (w.raf) return;
-        const evp0 = evp;
-        w.raf = requestAnimationFrame(() => {
-            w.raf = 0;
-            const cam0 = camLive.current;
-            const f = Math.exp(-w.d * (w.ctrl ? 0.008 : 0.0015));
-            w.d = 0;
-            const z = clampZ(cam0.z * f);
-            const p = { x: w.x, y: w.y };
-            const mw = toWorld(p, cam0);
-            const c = clampCam({ x: mw.x - (p.x - evp0.w / 2) / z, y: mw.y - (p.y - evp0.h / 2) / z, z });
-            setCam(c);
-            window.clearTimeout(w.timer);
-            w.timer = window.setTimeout(() => persist(camLive.current, pos, reviews), 400);
+        const cam0 = wheelPending.current ?? camLive.current;
+        const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.008 : 0.0015));
+        const z = clampZ(cam0.z * f);
+        const p = { x: e.clientX, y: e.clientY };
+        const mw = toWorld(p, cam0);
+        wheelPending.current = clampCam({ x: mw.x - (p.x - evp.w / 2) / z, y: mw.y - (p.y - evp.h / 2) / z, z });
+        if (wheelRaf.current) return;
+        wheelRaf.current = requestAnimationFrame(() => {
+            wheelRaf.current = 0;
+            if (wheelPending.current) setCam(wheelPending.current);
+            window.clearTimeout(wheelTimer.current);
+            wheelTimer.current = window.setTimeout(() => { wheelPending.current = null; persist(camLive.current, pos, reviews); }, 400);
         });
     };
 
