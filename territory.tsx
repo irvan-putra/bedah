@@ -295,13 +295,26 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
             <defs><marker id="rc-tr-arr" markerWidth="5" markerHeight="5" refX="4.4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 z" fill="#b8860b" /></marker><marker id="rc-ce-arr" markerWidth="5" markerHeight="5" refX="4.4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 z" fill="#2f6bab" /></marker></defs>
             {COMPONENTS.map((cp: C4Component) => {
                 const t = tiles[cp.id];
-                const fitCap = (t.head.w * 0.96) / (cp.name.length * 0.56);
-                const nameCap = Math.min(28, fitCap);
+                const fitCap = (t.head.w * 0.96) / (cp.name.length * 0.62);
+                // Long names wrap to two balanced lines inside the tile instead
+                // of shrinking below readability (owner feedback, 15 Nov); only
+                // while rooms are hidden, so the second line has free space.
+                const words = cp.name.split(' ');
+                let nameLines = [cp.name], nameCap = Math.min(28, fitCap);
+                if (!showRooms && fitCap < 24 && words.length > 1) {
+                    let bi = 1, bm = Infinity;
+                    for (let i = 1; i < words.length; i++) {
+                        const m = Math.max(words.slice(0, i).join(' ').length, words.slice(i).join(' ').length);
+                        if (m < bm) { bm = m; bi = i; }
+                    }
+                    nameLines = [words.slice(0, bi).join(' '), words.slice(bi).join(' ')];
+                    nameCap = Math.min(28, (t.head.w * 0.96) / (bm * 0.62));
+                }
                 const nameShow = zq * Math.min(nameCap, 11 / zq) >= 6.2;
                 return (
                     <g key={cp.id} data-comp={cp.id}>
                         <rect x={t.rect.x} y={t.rect.y} width={t.rect.w} height={t.rect.h} rx={6} className={`rc-t-tile${cp.shared ? ' rc-t-shared' : ''}`} />
-                        {nameShow ? <text x={t.head.x} y={t.head.y + nameCap * 0.82} className="rc-t-name" style={{ fontSize: csFont(11, nameCap) }}>{cp.name}</text> : null}
+                        {nameShow ? nameLines.map((ln, li) => <text key={li} x={t.head.x} y={t.head.y + nameCap * 0.82 + li * nameCap * 1.15} className="rc-t-name" style={{ fontSize: csFont(11, nameCap) }}>{ln}</text>) : null}
                         {showResp && cp.resp ? <foreignObject x={t.resp.x} y={t.resp.y} width={t.resp.w} height={t.resp.h}><div className="rc-t-resp">{cp.resp}</div></foreignObject> : null}
                         {showRooms ? t.rooms.map((r) => (
                             <g key={r.file}>
