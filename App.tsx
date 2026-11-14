@@ -2,8 +2,6 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TextLink, useLocalState } from './files-shim';
 import { COMMIT, COMMIT_SHORT, SECTIONS, Section } from './src/sections';
 import { COMPONENTS, COMPONENT_REFS, CODE_FILES, CODE_COMMIT_SHORT, C4Component } from './src/code';
-import { CM_EDGE_KINDS, CM_DECLS, CM_DOCREFS, CM_FILES } from './src/codemap';
-import { Territory, layoutTerritory, routeCompEdges, routeTrails, zoneTags } from './territory';
 
 type Pos = { x: number; y: number };
 type Cam = { x: number; y: number; z: number };
@@ -11,7 +9,7 @@ type Mark = 'reviewed' | 'flag';
 type Saved = { cam: Cam; pos: Record<string, Pos>; reviews?: Record<string, Mark>; findings?: Record<string, string> };
 
 const WORLD = { w: 3200, h: 3200 };
-const ZMIN = 0.07, ZMAX = 16;
+const ZMIN = 0.07, ZMAX = 2.5;
 // Zoom bands, C4-style progressive disclosure (c4model.com):
 //   z < SYS_Z    system context: people + the vana system + external systems
 //   z < GROUP_Z  container level: the repo's runnable units + code-evidenced
@@ -179,18 +177,6 @@ const NEST_EST: { frames: Record<string, { x: number; y: number; w: number; h: n
     });
     return { frames, pos };
 })();
-const TERR_FRAMES = { 'c-app': { x: 752, y: 560, w: 822, h: 512 }, 'c-gen': { x: 1930, y: 560, w: 822, h: 248 }, 'c-devsupport': { x: 1930, y: 868, w: 822, h: 248 } };
-// The system boundary encloses the whole frame complex (every container frame), with a label strip above.
-const SYS_BOX = (() => {
-    const fs = Object.values(TERR_FRAMES);
-    const x0 = Math.min(...fs.map((f) => f.x)) - 52, x1 = Math.max(...fs.map((f) => f.x + f.w)) + 52;
-    const y0 = 508, y1 = Math.max(...fs.map((f) => f.y + f.h)) + 52;
-    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, hw: (x1 - x0) / 2, hh: (y1 - y0) / 2 };
-})();
-const TERR_TILES = layoutTerritory(TERR_FRAMES);
-const TERR_EDGES = routeCompEdges(TERR_TILES, TERR_FRAMES);
-const TERR_TRAILS = routeTrails(TERR_TILES, TERR_FRAMES);
-const TERR_TAGS = zoneTags(TERR_FRAMES);
 type C4Rel = { a: string; b: string; label: string; dashed?: boolean; side?: 1 | -1; plain?: boolean };
 const C4_RELS: C4Rel[] = [
     { a: 'c-gen', b: 'c-app', label: 'generates review content' },                      // tools/gen_sections.py, tools/gen_code.py (--out src/)
@@ -218,6 +204,49 @@ const SYS_RELS: C4Rel[] = [
     // keeps serving from intodo, unchanged. Dashed: history, not a live link.
     { a: 'x-intodo', b: 's-vana', label: 'one-time extraction; original page unchanged', dashed: true, plain: true },
 ];
+// Supporting C4 views alongside the nested structure:
+// two dynamic diagrams (each ONE verifiable causal scenario, numbered over
+// time) and a deployment diagram (where each container actually runs). Same
+// canvas, same pan/zoom, same numbered-badge + docked-key mechanics; every
+// step names its repo evidence. Public repo content only.
+// Scenario 1: a source change goes live (push to Pages).
+const FLOW_NODES: C4Node[] = [
+    { id: 'f-dev', label: 'Owner', sub: 'developer machine', kind: 'person', frac: { fx: 0.12, fy: 0.5 } },
+    { id: 'f-repo', label: 'GitHub repo', sub: 'irvan-putra/vana, main', kind: 'external', frac: { fx: 0.4, fy: 0.22 } },
+    { id: 'f-gha', label: 'GitHub Actions', sub: 'deploy.yml: build + deploy jobs', kind: 'external', frac: { fx: 0.68, fy: 0.22 } },
+    { id: 'f-pages', label: 'GitHub Pages', sub: 'vanipy.com/vana/', kind: 'external', frac: { fx: 0.88, fy: 0.55 } },
+    { id: 'f-visitor', label: "Visitor's browser", sub: 'any device', kind: 'person', frac: { fx: 0.5, fy: 0.8 } },
+];
+const FLOW_STEPS: C4Rel[] = [
+    { a: 'f-dev', b: 'f-repo', label: 'git push to main with a canvas change' },
+    { a: 'f-repo', b: 'f-gha', label: 'push triggers the build job: locked npm ci --ignore-scripts + esbuild (contents: read only) · .github/workflows/deploy.yml, build.sh', side: 1 },
+    { a: 'f-gha', b: 'f-pages', label: 'deploy job publishes dist/ - the only privileged job (pages: write, github-pages environment)' },
+    { a: 'f-pages', b: 'f-visitor', label: 'served over HTTPS; the deploy job polls the live URL until it serves the exact built bytes · tools/verify_live.sh', side: 1 },
+];
+// Scenario 2: refreshing the review content after the source changes.
+const FEED_NODES: C4Node[] = [
+    { id: 'g-dev', label: 'Owner', sub: 'developer machine', kind: 'person', frac: { fx: 0.12, fy: 0.5 } },
+    { id: 'g-gen', label: 'Content generators', sub: 'tools/gen_sections.py + gen_code.py', kind: 'container', frac: { fx: 0.4, fy: 0.22 } },
+    { id: 'g-data', label: 'Generated content', sub: 'src/sections.ts + src/code.ts', kind: 'container', frac: { fx: 0.68, fy: 0.22 } },
+    { id: 'g-live', label: 'Live canvas', sub: 'vanipy.com/vana/', kind: 'external', frac: { fx: 0.88, fy: 0.6 } },
+];
+const FEED_STEPS: C4Rel[] = [
+    { a: 'g-dev', b: 'g-gen', label: 'points both generators at a local vana checkout (--repo) · README content refresh' },
+    { a: 'g-gen', b: 'g-data', label: 'regenerates sections.ts + code.ts pinned at that commit; the generated files are excluded from their own digests · tools/gen_sections.py' },
+    { a: 'g-dev', b: 'g-live', label: 'commits the regenerated content and pushes - the ship flow takes it live', side: 1 },
+];
+const DEPLOY_NODES: C4Node[] = [
+    { id: 'd-browser', label: "Visitor's browser", sub: 'static bundle + localStorage marks', kind: 'container', frac: { fx: 0.5, fy: 0.14 } },
+    { id: 'd-devmachine', label: 'Developer machine', sub: 'editors + generators + git', kind: 'container', frac: { fx: 0.22, fy: 0.5 } },
+    { id: 'd-github', label: 'GitHub', sub: 'repo + Pages (vanipy.com/vana/)', kind: 'external', frac: { fx: 0.76, fy: 0.3 } },
+    { id: 'd-gha', label: 'GitHub Actions runner', sub: 'build + deploy jobs', kind: 'external', frac: { fx: 0.76, fy: 0.68 } },
+];
+const DEPLOY_RELS: C4Rel[] = [
+    { a: 'd-github', b: 'd-browser', label: 'serves the static bundle (HTTPS)' },      // index.html + app.<hash>.js/css
+    { a: 'd-gha', b: 'd-github', label: 'builds + deploys dist/ on push to main' },    // .github/workflows/deploy.yml
+    { a: 'd-devmachine', b: 'd-github', label: 'git push' },                           // any git client
+];
+const VIEW_SETS = { flow: { nodes: FLOW_NODES, rels: FLOW_STEPS }, flowfeed: { nodes: FEED_NODES, rels: FEED_STEPS }, deploy: { nodes: DEPLOY_NODES, rels: DEPLOY_RELS } } as const;
 // key lookup: short edge labels stay nameless on the map, so the docked key
 // names each relation's endpoints explicitly (container + system ids)
 const REL_NODE_LABEL = (id: string) => [...CONTAINER_NODES, ...SYS_NODES].find((n) => n.id === id)?.label ?? id;
@@ -237,6 +266,47 @@ type Rect = { x: number; y: number; w: number; h: number };
 type GroupNode = { g: C4Node; x: number; y: number; hw: number; hh: number };
 // Screen-constant metrics: every size is device px, divided by the zoom to
 // get world units - text never shrinks with distance, the layout breathes.
+const D_LABEL = 13.5, D_SUB = 10, D_PADX = 14, D_PADY = 9, D_GAP = 3;
+function diagramLayout(defs: C4Node[], rect: Rect, z: number, measured: Record<string, { w: number; h: number }>): GroupNode[] {
+    const nodes: GroupNode[] = defs.map((g) => {
+        // labels wrap: boxes stay narrow enough to leave routable corridors
+        const MAXW = 150;
+        const labelCpl = Math.max(6, Math.floor((MAXW - 2 * D_PADX) / (D_LABEL * 0.62)));
+        const subCpl = Math.max(8, Math.floor((MAXW - 2 * D_PADX) / (D_SUB * 0.58)));
+        const labelLines = Math.ceil(g.label.length / labelCpl);
+        const subLines = Math.ceil(g.sub.length / subCpl);
+        let wPx = MAXW;
+        let hPx = 2 * D_PADY + labelLines * D_LABEL * 1.2 + D_GAP + subLines * D_SUB * 1.3;
+        if (g.members) hPx += D_GAP + D_SUB * 1.3;
+        const m = measured[g.id];
+        if (m) { wPx = m.w; hPx = m.h; }
+        return { g, x: rect.x + g.frac.fx * rect.w, y: rect.y + g.frac.fy * rect.h, hw: wPx / 2 / z, hh: hPx / 2 / z };
+    });
+    // fractions are chosen collision-free, but narrow viewports compress x;
+    // push overlapping pairs apart AND clamp inside the visible rect, in the
+    // same loop, so clamping cannot re-create overlaps
+    const clampN = (n: GroupNode) => {
+        n.x = Math.min(Math.max(n.x, rect.x + n.hw + 8 / z), rect.x + rect.w - n.hw - 8 / z);
+        n.y = Math.min(Math.max(n.y, rect.y + n.hh + 8 / z), rect.y + rect.h - n.hh - 8 / z);
+    };
+    for (let iter = 0; iter < 60; iter++) {
+        let moved = false;
+        for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j];
+            const ox = a.hw + b.hw + 20 / z - Math.abs(a.x - b.x);
+            const oy = a.hh + b.hh + 16 / z - Math.abs(a.y - b.y);
+            if (ox > 0 && oy > 0) {
+                moved = true;
+                if (ox < oy) { const d = (a.x <= b.x ? -1 : 1) * (ox / 2); a.x += d; b.x -= d; }
+                else { const d = (a.y <= b.y ? -1 : 1) * (oy / 2); a.y += d; b.y -= d; }
+                clampN(a); clampN(b);
+            }
+        }
+        if (!moved) break;
+    }
+    for (const n of nodes) clampN(n);
+    return nodes;
+}
 // Edge routing: straight border-to-border where clear; where a segment
 // crosses an unrelated box, insert a perpendicular detour waypoint beyond
 // that box and re-check. Badge goes on the longest unobstructed segment,
@@ -704,11 +774,10 @@ function Canvas() {
     const [cam, setCam] = useState<Cam>(saved?.cam ?? { x: 1600, y: 1600, z: 0.17 });
     const [pos, setPos] = useState<Record<string, Pos>>(sanePositions(saved?.pos ?? {}));
     const [focusedId, setFocusedId] = useState<string | null>(null);
+    const [focusedComp, setFocusedComp] = useState<string | null>(null);
     const [sheetGroup, setSheetGroup] = useState<string | null>(null);
     const [dock, setDock] = useState<'none' | 'menu' | 'legend'>('none');
-    // one canvas: the old whole-canvas view switches are gone
-    const [trail, setTrail] = useState<'none' | 'ship' | 'refresh'>('none');
-    const [menuComp, setMenuComp] = useState<string | null>(null);
+    const [view, setView] = useState<'structure' | 'flow' | 'flowfeed' | 'deploy'>('structure');
     const [measuredNodes, setMeasuredNodes] = useState<Record<string, { w: number; h: number }>>({});
     // Live container-band external/person node boxes (world units): their
     // content is counter-scaled (screen-constant label text), so rendered
@@ -725,6 +794,7 @@ function Canvas() {
     // geometry untouched - only the header's own size yields.
     const [labelFit, setLabelFit] = useState<Record<string, number>>({});
     const frameLabelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const compRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const [reviews, setReviews] = useState<Record<string, Mark>>(saved?.reviews ?? {});
     const [findings, setFindings] = useState<Record<string, string>>(saved?.findings ?? {});
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -818,7 +888,31 @@ function Canvas() {
         const fw = w, fh = Math.max(120, h - dockH);
         let c: Cam = { x: 1120, y: 1500, z: clampZ(Math.min(fw / 2380, fh / 2900) * 0.98) };
         const fitZ = (uw: number, uh: number) => clampZ(Math.min(fw / (uw + 80), fh / (uh + 80)) * 0.98);
-        {
+        if (view !== 'structure') {
+            const set = VIEW_SETS[view as 'flow' | 'flowfeed' | 'deploy'];
+            let z = cam.z, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            for (let it = 0; it < 10; it++) {
+                const ns = diagramLayout(set.nodes as C4Node[], layRect, z, measuredNodes);
+                const rs = routeRels(set.rels as C4Rel[], ns, z, layRect, true);
+                x0 = Infinity; y0 = Infinity; x1 = -Infinity; y1 = -Infinity;
+                ns.forEach((n) => { x0 = Math.min(x0, n.x - n.hw); y0 = Math.min(y0, n.y - n.hh); x1 = Math.max(x1, n.x + n.hw); y1 = Math.max(y1, n.y + n.hh); });
+                rs.forEach((r) => {
+                    if (r.hidden) return; // decluttered badges are not rendered - they must not inflate the fit
+                    r.pts.forEach((pt) => { x0 = Math.min(x0, pt.x); y0 = Math.min(y0, pt.y); x1 = Math.max(x1, pt.x); y1 = Math.max(y1, pt.y); });
+                    x0 = Math.min(x0, r.bx - r.r); y0 = Math.min(y0, r.by - r.r); x1 = Math.max(x1, r.bx + r.r); y1 = Math.max(y1, r.by + r.r);
+                });
+                if (!isFinite(x0) || x1 - x0 < 1 || y1 - y0 < 1) break;
+                const nz = fitZ(x1 - x0, y1 - y0);
+                // strictly shrink: smaller z only declutters more, so the
+                // union measured at the final z is the one that must fit
+                if (nz >= z || it === 9) break;
+                z = nz;
+            }
+            // center the union in the visible rect (0..fw, 0..fh): the cam is
+            // the world point at the FULL viewport center, so shift it by
+            // the dock reserve in world units.
+            if (isFinite(x0) && x1 > x0 && y1 > y0) c = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 + (h - fh) / (2 * z), z };
+        } else {
         // Band-independent fit: the map is one static world layout, but
         // external/person nodes and edge badges only RENDER at the container/
         // system bands - a DOM measure taken at detail zoom misses them and
@@ -904,16 +998,47 @@ function Canvas() {
         setCam(c); persist(c, pos, reviews);
     };
 
+    // Tap a component box at the comp/code bands: fit THAT component so one
+    // component's code is inspectable on a phone without clipped neighbors.
+    const focusComponent = (cid: string) => {
+        viewTouched.current = true;
+        setFocusedComp(cid);
+        const fit = () => {
+            const el = compRefs.current[cid];
+            const world = vpRef.current?.querySelector('.rc-world') as HTMLElement | null;
+            if (!el || !world || el.offsetWidth === 0) return null;
+            // offset-walk up to .rc-world: layout coordinates are pre-transform
+            // world units, independent of the current camera.
+            let wx = 0, wy = 0, n: HTMLElement | null = el;
+            while (n && n !== world) { wx += n.offsetLeft; wy += n.offsetTop; n = n.offsetParent as HTMLElement | null; }
+            if (n !== world) return null;
+            const w = el.offsetWidth, h = el.offsetHeight;
+            // Deliberate navigation, not a passive band: any readable zoom is
+            // fine; fit the detail overlay's width and top-align it.
+            const z = clampZ(Math.max(0.5, Math.min((evp.w - 20) / (w + 24), 1.3)));
+            return { x: wx + w / 2, y: wy + Math.min(h / 2, evp.h * 0.42 / z), z };
+        };
+        // The overlay renders after the focus state lands; fit on the settled
+        // layout, then once more against its final size.
+        window.setTimeout(() => { const c0 = fit(); if (c0) { setCam(c0); persist(c0, pos, reviews); } }, 60);
+        window.setTimeout(() => { const c1 = fit(); if (c1) { setCam(c1); persist(c1, pos, reviews); } }, 280);
+    };
+
+
     // Context level -> section level: zoom the camera to a group's bounds so
     // its member concept cards fill the view (lands inside the section band)
 
-    const focusTile = (cid: string) => {
-        viewTouched.current = true;
-        const r = TERR_TILES[cid].rect;
-        const z = clampZ(Math.min((evp.w - 20) / r.w, (evp.h * 0.7) / r.h, 6));
-        const c = clampCam({ x: r.x + r.w / 2, y: r.y + r.h / 2, z });
-        setCam(c); persist(c, pos, reviews);
-    };
+// Fixed tile size for a container's component overview: tiles never reflow
+// the frame - they are sized FROM the container's fixed NEST_EST rect.
+const compTileSize = (gid: string, n: number) => {
+    const f = NEST_EST.frames[gid];
+    // .rc-frame-cards reserves 108px top (label), 28px sides/bottom, 22px gaps.
+    const cols = n === 1 ? 1 : f.w >= 800 ? 3 : 2;
+    const rows = Math.max(1, Math.ceil(n / cols));
+    const w = Math.floor((f.w - 56 - (cols - 1) * 22) / cols);
+    const h = Math.min(180, Math.floor((f.h - 136 - (rows - 1) * 22) / rows));
+    return { w, h };
+};
 
     const focusGroup = (gid: string) => {
         viewTouched.current = true;
@@ -951,8 +1076,8 @@ function Canvas() {
     }, [overlayId, sheetOpen]);
 
     const band = cam.z < SYS_Z ? 'sys' : cam.z < GROUP_Z ? 'grp' : cam.z < COMP_Z ? 'comp' : cam.z < LO_Z ? 'lo' : 'detail';
+    const focusedCompContainer = focusedComp ? (COMPONENTS.find((c) => c.id === focusedComp)?.container ?? null) : null;
     // bands where frames render their contents (component boxes or cards)
-    const zq = Math.pow(2, Math.round(Math.log2(cam.z) * 8) / 8);
     const cardBand = band === 'comp' || band === 'lo' || band === 'detail';
     // Fit each frame header into the reserved strip above its cards: at the
     // card-visible bands the absolute label must clear the first card row.
@@ -997,7 +1122,7 @@ function Canvas() {
     // the camera simply stays where the user leaves it at every zoom.
     const pendingFrame = useRef<string | null>(null);
     useEffect(() => {
-        if (band !== 'detail') return;
+        if (view !== 'structure' || band !== 'detail') return;
         const gid = pendingFrame.current;
         if (!gid) return;
         const vp = vpRef.current;
@@ -1022,7 +1147,7 @@ function Canvas() {
             if (Math.abs(c.x - cam.x) > 1 || Math.abs(c.y - cam.y) > 1) { setCam(c); persist(c, pos, reviews); }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [band]);
+    }, [band, view]);
 
     const markSection = (id: string, m?: Mark) => {
         const r = { ...reviews };
@@ -1171,6 +1296,22 @@ function Canvas() {
                 const gid = frame?.getAttribute('data-frame');
                 if (gid) { gg.mode = null; setDragging(false); setPanning(false); focusGroup(gid); return; }
             }
+            // Component focus: a no-move tap on a component tile (comp band, or
+            // while a focus is open) opens/switches the focused detail; a tap
+            // anywhere else closes it. Deliberate navigation, distinct from
+            // passive zoom. The map keeps its pointer-events:none territory
+            // rule, so resolve the tap against measured rects.
+            if (e.type === 'pointerup' && gg.mode === 'pan' && !gg.moved && (band === 'comp' || focusedComp)) {
+                let hit: string | null = null;
+                for (const [cid, el] of Object.entries(compRefs.current)) {
+                    if (!el) continue;
+                    const r = el.getBoundingClientRect();
+                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { hit = cid; break; }
+                }
+                gg.mode = null; setDragging(false); setPanning(false);
+                if (hit && hit !== focusedComp) { focusComponent(hit); return; }
+                if (!hit && focusedComp) { setFocusedComp(null); return; }
+            }
             if (gg.mode) { viewTouched.current = true; persist(cam, pos, reviews); }
             gg.mode = null; setDragging(false); setPanning(false);
         }
@@ -1184,7 +1325,7 @@ function Canvas() {
     const flagCount = SECTIONS.filter((s) => reviews[s.id] === 'flag').length;
     const findingsCount = SECTIONS.filter((s) => (findings[s.id] ?? '').trim().length > 0).length;
     useEffect(() => {
-        const sel = band === 'grp' ? '.rc-groups .rc-grpnode' : band === 'sys' ? '.rc-sysnodes .rc-grpnode' : null;
+        const sel = view !== 'structure' ? '.rc-viewnodes .rc-grpnode' : band === 'grp' ? '.rc-groups .rc-grpnode' : band === 'sys' ? '.rc-sysnodes .rc-grpnode' : null;
         if (!sel) return;
         let changed = false;
         const next = { ...measuredNodes };
@@ -1199,13 +1340,13 @@ function Canvas() {
             }
         });
         if (changed) setMeasuredNodes(next);
-    }, [band, measuredNodes]);
+    }, [band, view, measuredNodes]);
 
     // Re-measure on band entry and zoom buckets (not every pinch frame):
     // within a 4% zoom bucket the border moves <2 world px, invisible.
     const zBucket = Math.round(cam.z * 25) / 25;
     useEffect(() => {
-        if (band !== 'grp') return;
+        if (view !== 'structure' || band !== 'grp') return;
         const next: Record<string, { w: number; h: number }> = {};
         document.querySelectorAll('.rc-groups .rc-grpnode[data-nid]').forEach((el) => {
             const r = el.getBoundingClientRect();
@@ -1216,7 +1357,7 @@ function Canvas() {
             return ks.length === Object.keys(prev).length && ks.every((k) => prev[k] && Math.abs(prev[k].w - next[k].w) < 1 && Math.abs(prev[k].h - next[k].h) < 1) ? prev : next;
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [band, zBucket]);
+    }, [view, band, zBucket]);
 
     useEffect(() => {
         const next: Record<string, Rect> = {};
@@ -1251,19 +1392,19 @@ function Canvas() {
     // so the fit zoom lands near the top of the system band instead of far
     // below it (phone fit was z~0.10, deep in the far-zoom tier where only
     // names remain).
-    const SPREAD_X = evp.w < 560 ? 1.3 : 1.55;
-    const SPREAD_Y = evp.w < 560 ? 1.3 : 1.5;
+    const SPREAD_X = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.3 : 1.55;
+    const SPREAD_Y = view !== 'structure' ? 1.1 : evp.w < 560 ? 1.3 : 1.5;
     const MIN_SPREAD = { w: 1750, h: 1250 };
     // One fixed world-anchored layout per viewport size:
     // a single continuous map. Bands change only how much
     // detail renders inside each frame, never where anything sits; zoom and
     // pan never re-lay. The spread is a function of the VIEWPORT (recomputed
     // on resize/rotation, like any responsive layout), never of the camera.
-    const laySpread = {
+    const laySpread = view !== 'structure' ? { w: 0, h: 0 } : {
         w: Math.min(WORLD.w - 80, Math.max(MIN_SPREAD.w, evp.w * SPREAD_X / SYS_Z)),
         h: Math.min(WORLD.h - 80, Math.max(MIN_SPREAD.h, evp.h * SPREAD_Y / SYS_Z)),
     };
-    const layRect: Rect = {
+    const layRect: Rect = view !== 'structure' ? { x: 40, y: 40, w: WORLD.w - 80, h: WORLD.h - 80 } : {
         x: (WORLD.w - laySpread.w) / 2, y: 40 + (WORLD.h - 80 - laySpread.h) / 2, w: laySpread.w, h: laySpread.h,
     };
     // One stable world map: at the container and
@@ -1308,7 +1449,7 @@ function Canvas() {
     // same world rect at the system, container and section bands; only what
     // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
-        { g: SYS_NODES.find((x) => x.id === 's-vana')!, ...SYS_BOX },
+        { g: SYS_NODES.find((x) => x.id === 's-vana')!, x: layRect.x + 0.44 * layRect.w, y: layRect.y + 0.50 * layRect.h, hw: layRect.w * 0.24, hh: layRect.h * 0.35 },
         nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.66, 0.045),
         nodeX('x-intodo', 0.06, 0.52),
         nodeX('x-gha', 0.94, 0.42), nodeX('x-github', 0.94, 0.58),
@@ -1408,11 +1549,58 @@ function Canvas() {
     // Supporting views (dynamic flow / deployment) reuse the same
     // layout + routing pipeline; their edges are numbered steps/routes in
     // the docked key, same as the structure bands.
+    const viewLayout: GroupNode[] = view !== 'structure' ? diagramLayout(VIEW_SETS[view].nodes as C4Node[], layRect, cam.z, measuredNodes) : [];
+    const viewRelRoutes = view !== 'structure' ? routeRels(VIEW_SETS[view].rels as C4Rel[], viewLayout, cam.z, layRect, true) : [];
     // Dock key lists exactly the numbered set shown on the map at this band:
     // container band numbers C4_RELS then the extra system edges (same order
     // grpRels routes them); the system band shows unnumbered arrows, so its
     // key entries render without numbers below.
-    const dockRels: C4Rel[] | null = band === 'grp' ? [...C4_RELS, ...GRP_EXTRA_RELS] : band === 'sys' ? SYS_RELS : null;
+    const dockRels: C4Rel[] | null = view !== 'structure' ? VIEW_SETS[view].rels : band === 'grp' ? [...C4_RELS, ...GRP_EXTRA_RELS] : band === 'sys' ? SYS_RELS : null;
+
+    // One component box (component band: summary; code band: + code
+    // elements). All facts from generated code.ts; nothing hand-typed here.
+    // Bounded overview tile: fixed world size from the container's NEST_EST
+    // frame, so passive zoom never reflows the map. Full content lives in the
+    // focused detail overlay (compDetail) via deliberate tap navigation.
+    const compTile = (cp: C4Component, t: { w: number; h: number }) => (
+        <div ref={(el) => { compRefs.current[cp.id] = el; }} className={`rc-comp rc-comp-tile${cp.shared ? ' rc-comp-shared' : ''}${cp.shared || cp.devOnly ? ' rc-comp-hasflags' : ''}`} style={{ width: t.w, height: t.h, ['--tnscale' as string]: t.h >= 150 ? '1' : '0.72' }}>
+            <div className="rc-comp-head"><span className="rc-comp-name">{cp.name}</span>{cp.shared || cp.devOnly ? <span className="rc-comp-cornertags">{cp.shared ? <span className="rc-comp-flag">shared</span> : null}{cp.devOnly ? <span className="rc-comp-flag">dev only</span> : null}</span> : null}</div>
+        </div>
+    );
+
+    const compDetail = (cp: C4Component) => {
+        const refs = REFS_FROM[cp.id] ?? []; // all references shown: no silent omission
+        const els: string[] = [];
+        for (const f of cp.files) {
+            const cf = CODE_FILES[f];
+            if (cf) for (const e of cf.els) { if (!els.includes(e.name)) els.push(e.name); }
+        }
+        return (
+            <div ref={(el) => { compRefs.current[cp.id] = el; }} className={`rc-comp rc-comp-focus${cp.shared ? ' rc-comp-shared' : ''}`} style={{ width: 360 }}>
+                <div className="rc-comp-head"><span className="rc-comp-name">{cp.name}</span><span className="rc-kindchip rc-kindchip-component">{KIND_TAG.component}</span><span className="rc-comp-flag">code layer @{CODE_COMMIT_SHORT}</span>{cp.shared ? <span className="rc-comp-flag">shared</span> : null}{cp.devOnly ? <span className="rc-comp-flag">dev only</span> : null}</div>
+                <div className="rc-comp-tech">{cp.tech}</div>
+                {cp.resp ? <div className="rc-comp-resp">{cp.resp}</div> : null}
+                <div className="rc-comp-els">{els.slice(0, 6).map((e) => <span key={e} className="rc-comp-el">{e}</span>)}{els.length > 6 ? <span className="rc-comp-el rc-comp-more">+{els.length - 6}</span> : null}</div>
+                {refs.map((r) => (<div key={r.b} className="rc-comp-ref">{'\u2192'} {COMP_NAME[r.b]} <span className="rc-comp-via">{r.via[0]}</span></div>))}
+                <div className="rc-comp-secs">review: {cp.sections.join(', ')}</div>
+                <div className="rc-comp-files">{cp.files.map((f) => {
+                    const cf = CODE_FILES[f];
+                    if (!cf) return null;
+                    const base = f.split('/').pop()!;
+                    return (
+                        <div key={f} className="rc-cfile">
+                            <div className="rc-cfile-head"><span className="rc-cfile-name">{base}</span>{cf.lines != null ? <span className="rc-cfile-lines">{cf.lines} lines</span> : null}</div>
+                            {!cf.els.length && cf.kindNote ? <div className="rc-cfile-els"><span className="rc-comp-el"><em>{cf.kindNote}</em></span></div> : null}
+                            {cf.els.length ? <div className="rc-cfile-els">{cf.els.slice(0, 6).map((e) => <span key={e.name} className="rc-comp-el">{e.name} <em>{e.kind}</em></span>)}{cf.els.length > 6 ? <span className="rc-comp-el rc-comp-more">+{cf.els.length - 6}</span> : null}</div> : null}
+                            {cf.intraRefs.length ? <div className="rc-cfile-refs">references: {cf.intraRefs.join(', ')}</div> : null}
+                            {cf.role ? <div className="rc-cfile-role">{cf.role}</div> : null}
+                        </div>
+                    );
+                })}</div>
+            </div>
+        );
+    };
+
 
     const cards: Record<string, React.ReactNode> = {
         progress: <CardShell id="progress" tag="Center" purpose="Do the task - how-to" title="Review progress" centerCard onFocus={focusCard}>
@@ -1472,7 +1660,7 @@ function Canvas() {
                     ['--camz' as any]: cam.z,
                 }}
             >
-                {(<>
+                {view === 'structure' && (<>
                 <div className="rc-groups">
                     {/* containers render as their (collapsed) frames, so only
                         externals/people appear as nodes here */}
@@ -1556,12 +1744,48 @@ function Canvas() {
                     )))}
                 </svg>
                 </>)}
+                {/* supporting views: dynamic flow and
+                    deployment, rendered with the same nodes/edges/badges
+                    machinery at any zoom; no section cards in these views */}
+                {view !== 'structure' && (<>
+                <svg className="rc-viewedges" width={WORLD.w} height={WORLD.h}>
+                    <defs>
+                        <marker id="rc-arr-view" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                            <path d="M0,0 L7,3.5 L0,7 z" fill="var(--ds-teal)" />
+                        </marker>
+                    </defs>
+                    {viewRelRoutes.map((g) => (
+                        <polyline key={g.key} points={g.pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none"
+                            markerEnd="url(#rc-arr-view)" />
+                    ))}
+                </svg>
+                <div className="rc-viewnodes">
+                    {viewLayout.map((n) => (
+                        <div key={n.g.id} data-nid={n.g.id} className={`rc-grpnode rc-node-${n.g.kind}`} style={{ left: n.x, top: n.y }}>
+                            {n.g.kind === 'person' ? C4_PERSON_ICON : null}
+                            <span className="rc-grplabel">{n.g.label}</span>
+                            <span className="rc-grpcount">{n.g.sub}</span>
+                            <span className={`rc-kindtag rc-kindtag-${n.g.kind}`}>{KIND_TAG[n.g.kind]}</span>
+                        </div>
+                    ))}
+                </div>
+                <svg className="rc-viewlabels" width={WORLD.w} height={WORLD.h}>
+                    {viewRelRoutes.map((g) => (g.hidden ? null : (
+                        <g key={g.key} className={`rc-rel-badge${g.dashed ? ' rc-rel-badge-dash' : ''}`}>
+                            <rect x={g.bx - (g.hw ?? g.r)} y={g.by - (g.hh ?? g.r)} width={(g.hw ?? g.r) * 2} height={(g.hh ?? g.r) * 2} rx={Math.min(g.hh ?? g.r, 8 / cam.z)} />
+                            {(g.lines ?? []).map((ln, li) => (
+                                <text key={li} x={g.bx} y={g.by + (li - ((g.lines ?? []).length - 1) / 2) * 11 / cam.z}>{ln}</text>
+                            ))}
+                        </g>
+                    )))}
+                </svg>
+                </>)}
                 {/* section level: every card belongs to a C4 container. In
                     the detail band each container renders as a labeled frame
                     with its cards inside (NEST), C4 zoom-in-context style;
                     in the section band chips flow under their container label
                     in reading order (LO_LAYOUT). */}
-                {NEST_COLUMNS.map((col, ci) => (
+                {view === 'structure' && NEST_COLUMNS.map((col, ci) => (
                     <div key={ci} className="rc-nest-col" style={{ left: NEST_COL_X[ci], top: 560 }}>
                         {col.map((gid) => {
                             const g = C4_CONTAINERS.find((c) => c.id === gid)!;
@@ -1575,23 +1799,42 @@ function Canvas() {
                             return (
                                 <div key={gid} data-frame={gid} className={`rc-frame${g.kind === 'support' ? ' rc-frame-support' : ''}`} style={{ width: NEST_FRAME_W(gid), height: NEST_EST.frames[gid].h, ['--ftmax' as string]: ftmax + 'px' }}
                                     >
-                                    <div ref={(el) => { frameLabelRefs.current[gid] = el; }} className={`rc-frame-label${cardBand && (labelFit[gid] ?? 0) >= 3 ? ' rc-frame-tight' : ''}`} style={{ ['--lfscale' as string]: cardBand ? Math.pow(0.78, labelFit[gid] ?? 0) : 1 }}><span className="rc-frame-row1"><span className="rc-frame-title">{g.label}</span></span><span className="rc-frame-row2">{band === 'comp' && COMPONENTS_BY_CONTAINER[gid] ? <><span className="rc-frame-pin">components/code @{CODE_COMMIT_SHORT}</span></> : <><span className="rc-frame-sub">{g.sub}</span><span className={`rc-frame-kind rc-kindtag-${g.kind}`}>{KIND_TAG[g.kind]}</span></>}<span className="rc-frame-count">{(() => { const n = (g.members?.length ?? 0) + (g.attached?.length ?? 0); return `${n} ${n === 1 ? 'item' : 'items'}`; })()}</span></span></div>
+                                    <div ref={(el) => { frameLabelRefs.current[gid] = el; }} className={`rc-frame-label${cardBand && (labelFit[gid] ?? 0) >= 3 ? ' rc-frame-tight' : ''}`} style={{ ['--lfscale' as string]: cardBand ? Math.pow(0.78, labelFit[gid] ?? 0) : 1 }}><span className="rc-frame-row1"><span className="rc-frame-title">{g.label}</span></span><span className="rc-frame-row2">{(band === 'comp' || focusedCompContainer === gid) && COMPONENTS_BY_CONTAINER[gid] ? <><span className="rc-frame-pin">components/code @{CODE_COMMIT_SHORT}</span></> : <><span className="rc-frame-sub">{g.sub}</span><span className={`rc-frame-kind rc-kindtag-${g.kind}`}>{KIND_TAG[g.kind]}</span></>}<span className="rc-frame-count">{(() => { const n = (g.members?.length ?? 0) + (g.attached?.length ?? 0); return `${n} ${n === 1 ? 'item' : 'items'}`; })()}</span></span></div>
+                                    <div className="rc-frame-cards">
+                                        {/* component/code bands: the container's real functional
+                                            components (generated from source) replace its section
+                                            cards; attached verification/meta cards stay. Supporting
+                                            groups without components keep their section cards. */}
+                                        {(band === 'comp' || focusedCompContainer === gid) && COMPONENTS_BY_CONTAINER[gid] ? (<>
+                                            {(() => { const t = compTileSize(gid, COMPONENTS_BY_CONTAINER[gid].length); return COMPONENTS_BY_CONTAINER[gid].map((cp) => (
+                                                <div key={cp.id} style={{ position: 'relative', width: t.w, height: t.h, flex: 'none' }}>
+                                                    {focusedComp === cp.id ? compDetail(cp) : compTile(cp, t)}
+                                                </div>
+                                            )); })()}
+                                        </>) : (<>
+                                        {/* legacy saved positions (draggable era) migrate into the frame
+                                            as reading order - top to bottom, then left to right - instead
+                                            of being dropped; cards without a saved position keep their
+                                            curated order. Cards stay fixed. */}
+                                        {[...(g.members ?? []), ...(g.attached ?? [])]
+                                            .map((m, i) => ({ m, i, p: pos[m] }))
+                                            .sort((a, b) => (a.p && b.p ? (a.p.y - b.p.y) || (a.p.x - b.p.x) : a.p ? -1 : b.p ? 1 : a.i - b.i))
+                                            .map(({ m }) => (
+                                                <div key={m} style={{ width: CARD_SIZES[m].w, flex: 'none' }}>{cards[m]}</div>
+                                            ))}
+                                        </>)}
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 ))}
-                {(
-                    <svg className="rc-terr" width={2040} height={620} viewBox="730 530 2040 620" style={{ left: 730, top: 530 }}>
-                        <Territory tiles={TERR_TILES} zq={zq} edges={TERR_EDGES} trails={TERR_TRAILS} trail={trail} tags={TERR_TAGS} />
-                    </svg>
-                )}
                 {/* container-band edges + authored label pills render last so
                     they paint above the collapsed frames: each pill must stay
                     fully visible on its own connector (interior stubs cross
                     frame fill/header edges by design). Both svgs are
                     pointer-events:none, so frame taps still land. rc-grp only. */}
-                {(<>
+                {view === 'structure' && (<>
                 <svg className="rc-gedges" width={WORLD.w} height={WORLD.h}>
                     <defs>
                         {/* arrowheads stay smaller than the shaft they tip:
@@ -1651,56 +1894,28 @@ function Canvas() {
             but not active (manual run) or no deployed runtime link */}
         {dock === 'legend' && dockRels ? (
             <div className="rc-legend">
+                {view === 'flow' || view === 'flowfeed' ? <span className="rc-legend-item rc-legend-key">Numbered steps, in order:</span> : null}
                 {dockRels.map((r, i) => (
-                    <span className="rc-legend-item" key={r.label}>{<span className="rc-legend-endpoints">{`${REL_NODE_LABEL(r.a)} \u2192 ${REL_NODE_LABEL(r.b)}: `}</span>}{r.label}</span>
+                    <span className="rc-legend-item" key={r.label}>{view === 'structure' ? <span className="rc-legend-endpoints">{`${REL_NODE_LABEL(r.a)} \u2192 ${REL_NODE_LABEL(r.b)}: `}</span> : <span className={`rc-legend-num${r.dashed ? ' rc-legend-num-dash' : ''}`}>{i + 1}</span>}{r.label}</span>
                 ))}
-                <span className="rc-legend-item rc-legend-key"><span className="rc-legend-line"></span>observed flow or manual step (repo-evidenced) · <span className="rc-legend-line rc-legend-dash"></span>{band === 'grp' ? 'no runtime link / manual run, not automatic' : 'manual run, not automatic (workflow_dispatch in repo)'}</span>
-                <span className="rc-legend-item rc-legend-key rc-legend-shapes">Shapes: <span className="rc-kindchip rc-kindchip-person">{C4_PERSON_ICON}person</span> <span className="rc-kindchip rc-kindchip-system">software system</span> <span className="rc-kindchip rc-kindchip-container">container</span> <span className="rc-kindchip rc-kindchip-external">external system</span> <span className="rc-kindchip rc-kindchip-support">supporting</span></span>
-
+                {view === 'structure' ? (
+                    <span className="rc-legend-item rc-legend-key"><span className="rc-legend-line"></span>observed flow or manual step (repo-evidenced) · <span className="rc-legend-line rc-legend-dash"></span>{band === 'grp' ? 'no runtime link / manual run, not automatic' : 'manual run, not automatic (workflow_dispatch in repo)'}</span>
+                ) : null}
+                {view === 'structure' ? (
+                    <span className="rc-legend-item rc-legend-key rc-legend-shapes">Shapes: <span className="rc-kindchip rc-kindchip-person">{C4_PERSON_ICON}person</span> <span className="rc-kindchip rc-kindchip-system">software system</span> <span className="rc-kindchip rc-kindchip-container">container</span> <span className="rc-kindchip rc-kindchip-external">external system</span> <span className="rc-kindchip rc-kindchip-support">supporting</span></span>
+                ) : null}
             </div>
         ) : null}
         {dock === 'menu' ? (
             <div className="rc-menu">
-                <span className="rc-menu-head">Trails on the map (emphasis only, the map itself never changes)</span>
+                <span className="rc-menu-head">Diagram views</span>
                 <div className="rc-menu-row">
-                    {([['none', 'Off'], ['ship', 'Ship flow'], ['refresh', 'Content refresh']] as const).map(([id, lab]) => (
-                        <button key={id} type="button" className={`rc-menu-btn${trail === id ? ' rc-menu-on' : ''}`} onClick={() => setTrail(id)}>{lab}</button>
-                    ))}
+                    <button type="button" className={`rc-menu-btn${view === 'structure' ? ' rc-menu-on' : ''}`} onClick={() => setView('structure')}>Structure</button>
+                    <button type="button" className={`rc-menu-btn${view === 'flow' ? ' rc-menu-on' : ''}`} onClick={() => setView('flow')}>Ship flow</button>
+                    <button type="button" className={`rc-menu-btn${view === 'flowfeed' ? ' rc-menu-on' : ''}`} onClick={() => setView('flowfeed')}>Content refresh</button>
+                    <button type="button" className={`rc-menu-btn${view === 'deploy' ? ' rc-menu-on' : ''}`} onClick={() => setView('deploy')}>Where it runs</button>
                 </div>
-                <span className="rc-menu-head">Components</span>
-                <div className="rc-menu-row">
-                    {COMPONENTS.map((cp) => (
-                        <button key={cp.id} type="button" className={`rc-menu-btn${menuComp === cp.id ? ' rc-menu-on' : ''}`} onClick={() => { setMenuComp(menuComp === cp.id ? null : cp.id); focusTile(cp.id); }}>{cp.name}</button>
-                    ))}
-                </div>
-                {menuComp ? (() => {
-                    const cp = COMPONENTS.find((c) => c.id === menuComp)!;
-                    const refs = REFS_FROM[cp.id] ?? [];
-                    return (
-                        <div className="rc-menu-detail">
-                            <p><strong>{cp.name}</strong> - {cp.tech}</p>
-                            {cp.resp ? <p>{cp.resp}</p> : null}
-                            {cp.files.map((f) => CODE_FILES[f]?.role ? <p key={f}><em>{f.split('/').pop()}:</em> {CODE_FILES[f].role}</p> : <p key={f}><em>{f.split('/').pop()}</em></p>)}
-                            {cp.files.flatMap((f) => CM_DECLS.filter((d) => d.file === f && d.doc).map((d) => (
-                                <p key={d.id} className="rc-menu-note"><em>{d.name}</em> <span>({f.split('/').pop()}:{d.line}, author {d.doc!.kind}, not verified):</span> {d.doc!.text}</p>
-                            )))}
-                            {cp.files.flatMap((f) => CM_DOCREFS.filter((r) => r.target === f || r.target.startsWith(f + '#')).map((r, i) => (
-                                <p key={f + i} className="rc-menu-note"><span>{r.file}:{r.line} mentions `{r.token}` ({r.kind}, text mention, not a code relation)</span></p>
-                            )))}
-                            <p>Review sections: {cp.sections.join(', ')}</p>
-                            {refs.map((r) => <p key={r.b}>{'\u2192'} {COMP_NAME[r.b]}: {r.via[0]}</p>)}
-                        </div>
-                    );
-                })() : null}
-                <span className="rc-menu-head">What the code map is</span>
-                <div className="rc-menu-detail">
-                    <p>TypeScript/TSX and Python declarations come from real parsers (TypeScript compiler, Python ast). Jobs, headings and dependencies come from line/JSON scans. Shell, CSS, HTML, lockfiles and other files are listed as files only.</p>
-                    {Object.entries(CM_EDGE_KINDS).map(([k, v]) => <p key={k}><strong>{k}</strong>: {v}</p>)}
-                    <p>Inventory: {CM_FILES.length} files listed from git (tracked plus untracked, not ignored). Unassigned to a component: {CM_FILES.filter((f) => !f.comp).map((f) => f.path).join(', ') || 'none'}. Binary or media files: {CM_FILES.filter((f) => f.lang === 'asset').map((f) => `${f.path} (${f.size} bytes, contents not analyzed)`).join(', ') || 'none present'}.</p>
-                    <p>Comments: leading comments, JSDoc and docstrings are attached to the declaration they sit above ({CM_DECLS.filter((d) => d.doc).length} declarations). They are the author's words, shown with their source line, and never create a relation. Markdown mentions of a file or declaration in backticks are listed as text mentions ({CM_DOCREFS.length}); they are not code relations and nothing here says the prose is true.</p>
-                    <p>None of these is a proven runtime call. Generated files (code.ts, codemap.ts) are not broken down.</p>
-                </div>
-
+                {view === 'structure' ? (
                     <>
                         <span className="rc-menu-head">Jump to a container</span>
                         <div className="rc-menu-row">
@@ -1715,14 +1930,14 @@ function Canvas() {
                             ))}
                         </div>
                     </>
-
+                ) : null}
             </div>
         ) : null}
         <div className="rc-dockbar">
             <button type="button" className={`rc-dockchip${dock === 'menu' ? ' rc-dockchip-on' : ''}`} onClick={() => setDock(dock === 'menu' ? 'none' : 'menu')}>{dock === 'menu' ? 'Close menu' : 'Menu'}</button>
             <button type="button" className="rc-dockchip" onClick={() => { viewTouched.current = true; fitView(); }}>Fit map</button>
             {dockRels ? (
-                <button type="button" className={`rc-dockchip${dock === 'legend' ? ' rc-dockchip-on' : ''}`} onClick={() => setDock(dock === 'legend' ? 'none' : 'legend')}>{dock === 'legend' ? 'Hide key' : 'Relationship key'}</button>
+                <button type="button" className={`rc-dockchip${dock === 'legend' ? ' rc-dockchip-on' : ''}`} onClick={() => setDock(dock === 'legend' ? 'none' : 'legend')}>{dock === 'legend' ? 'Hide key' : view === 'flow' || view === 'flowfeed' ? 'Step key' : 'Relationship key'}</button>
             ) : null}
             {/* the band/view caption lives in the dock, never on the canvas:
                 as a bottom-right overlay it covered the external nodes and
@@ -1731,11 +1946,15 @@ function Canvas() {
                 detail band): appearing/disappearing would resize the canvas
                 mid-gesture and retrigger the viewport fit, yanking the pan. */}
             {(() => {
-                const cap = band === 'sys' ? 'Understand - the system context' :
+                const cap = view === 'flow' ? 'Understand - a source change going live, step by step' :
+                    view === 'flowfeed' ? 'Understand - refreshing the review content, step by step' :
+                    view === 'deploy' ? 'Understand - where vana runs' :
+                    band === 'sys' ? 'Understand - the system context' :
                     band === 'grp' ? 'Understand - the containers' :
-                    band === 'comp' ? `Components @${CODE_COMMIT_SHORT} - imports and generator headers are proven; name matches are not calls` :
+                    focusedComp ? `Component + code layer: ${COMP_NAME[focusedComp] ?? focusedComp} - tap elsewhere to close` :
+                    band === 'comp' ? `Components @${CODE_COMMIT_SHORT} - static references, not proven calls. Tap a tile for its component + code layer` :
                                         band === 'detail' ? '' :
-                    `Files and declarations @${CODE_COMMIT_SHORT} - static scan, coverage in the Menu`;
+                    `Look up - the ${SECTIONS.length} sections @${COMMIT_SHORT}`;
                 const hide = cap === '';
                 return <span className="rc-bandcap" style={hide ? { visibility: 'hidden' } : undefined} aria-hidden={hide}>{hide ? '\u00a0' : cap}</span>;
             })()}

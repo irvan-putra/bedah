@@ -26,7 +26,6 @@ on:
       - 'index.html'
       - 'static.css'
       - 'files-shim.tsx'
-      - 'territory.tsx'
       - 'src/**'
       - 'tools/**'
       - 'build.sh'
