@@ -1470,9 +1470,14 @@ const compTileSize = (gid: string, n: number) => {
     // ever suppressed or re-placed by collision heuristics at this band.
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
-        'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
+        // GitHub pair ports: enter x-github along ITS OWN mid/bottom lanes
+        // (center y 1849.6), never at y=1400 - that line belongs to x-gha's
+        // box (center y 1350), so the old approaches stabbed the Actions box.
+        // Endpoint snap only adjusts along the final segment axis, so the
+        // authored lane itself must sit on the target's territory at every zoom.
+        'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [2973, 2520], [2973, 1900]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
         'p-visitor-c-app': { pts: [[1818, 250], [1500, 250], [1500, 560]], pill: [1640, 250], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
-        'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
+        'c-devsupport-x-github': { pts: [[2748, 990], [3350, 990], [3350, 1850], [3300, 1850]], pill: [3050, 930], lines: ['push-triggered', 'build + deploy'], hw: 165 },
         // People edges ride the gutter opened above the system boundary
         // (people row raised to fy 0.07): each pill sits on its own
         // connector, world-sized like the other authored pills, so it reads
