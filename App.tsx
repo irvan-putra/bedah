@@ -132,7 +132,7 @@ const COMP_NAME: Record<string, string> = Object.fromEntries(COMPONENTS.map((c) 
 // the label is inverse-scaled (constant screen size), so its world height
 // grows as zoom falls; 78 world px clears it down to z ~ 0.55.
 const NEST_PAD = 28, NEST_LABEL_H = 78, NEST_GAP = 22, NEST_COL_W = 392, NEST_FRAME_GAP = 360;
-const NEST_COLS: Record<string, number> = { 'c-app': 2, 'c-gen': 1, 'c-devsupport': 2 };
+const NEST_COLS: Record<string, number> = { 'c-app': 2, 'c-gen': 2, 'c-devsupport': 2 };
 // Two frame columns, height-balanced so the whole map fits a phone screen
 // at a meaningfully higher zoom (better spread):
 // the tall app frame pairs with the supporting frame on the left, the other
@@ -181,7 +181,6 @@ type C4Rel = { a: string; b: string; label: string; dashed?: boolean; side?: 1 |
 const C4_RELS: C4Rel[] = [
     { a: 'c-gen', b: 'c-app', label: 'generates review content' },                      // tools/gen_sections.py, tools/gen_code.py (--out src/)
     { a: 'c-app', b: 'x-github', label: 'source links at pinned commit' },              // App.tsx SectionCard links
-    { a: 'p-owner', b: 'c-gen', label: 'runs by hand after source changes' },           // README: content refresh
     { a: 'p-visitor', b: 'c-app', label: 'reads + marks (localStorage only)' },         // files-shim.tsx useLocalState
     { a: 'c-devsupport', b: 'x-github', label: 'push-triggered build + Pages deploy' }, // .github/workflows/deploy.yml, build.sh
 ];
@@ -1421,8 +1420,7 @@ const compTileSize = (gid: string, n: number) => {
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
         'c-app-x-github': { pts: [[1570, 1000], [1900, 1000], [1900, 2520], [3660, 2520], [3660, 1400], [3540, 1400]], pill: [2800, 2445], lines: ['source links at', 'pinned commit'], hw: 170 },
-        'p-owner-c-gen': { pts: [[1170, 330], [1750, 330], [1750, 671], [1930, 671]], pill: [1810, 462], lines: ['runs by hand after', 'source changes'], hw: 150 },
-        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1480, 470], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
+        'p-visitor-c-app': { pts: [[2030, 330], [1400, 330], [1400, 560]], pill: [1650, 430], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         'c-devsupport-x-github': { pts: [[2748, 1253], [3000, 1253], [3000, 1400], [3180, 1400]], pill: [2900, 1190], lines: ['push-triggered', 'build + deploy'], hw: 165 },
         'p-owner-s-vana': { pts: [[1050, 375], [1050, 500]], pill: [1120, 455], lines: ['writes + reviews'], hw: 120 },
         'p-visitor-s-vana': { pts: [[2150, 375], [2150, 500]], pill: [2080, 520], lines: ['reads + marks', '(local only)'], hw: 130 },
