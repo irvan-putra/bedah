@@ -1,11 +1,11 @@
-// Generated from irvan-putra/vana @ 4766974 by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/vana @ e5f9610 by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
 // come from a static syntax scan (a reference is a NAME match, not a proven call).
 
-export const CODE_COMMIT = "476697493b90ae2c2d8360edbbb4d96de909f4d3";
-export const CODE_COMMIT_SHORT = "4766974";
+export const CODE_COMMIT = "e5f9610196abb03ba0c3f0462c015747a1042107";
+export const CODE_COMMIT_SHORT = "e5f9610";
 export type CodeEl = { name: string; kind: string };
 export type CodeFile = { path: string; lines: number | null; role?: string | null; els: CodeEl[]; kindNote?: string | null; intraRefs: string[] };
 export type C4Component = { id: string; container: string; name: string; tech: string; resp?: string | null; files: string[]; sections: string[]; shared: boolean; devOnly: boolean };
@@ -292,7 +292,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   },
   "territory.tsx": {
     "path": "territory.tsx",
-    "lines": 368,
+    "lines": 381,
     "role": "The fixed territory below the container frames: component buildings, file rooms, declaration chips and the relationships between them.",
     "els": [
       {
@@ -431,7 +431,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 172,
-    "role": "Generated from irvan-putra/vana @ 4766974 by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/vana @ e5f9610 by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
