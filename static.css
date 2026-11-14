@@ -200,16 +200,6 @@ a, .rc-card a { color: var(--ds-ink); }
     font-weight: 400; color: var(--ds-ink-2);
     font-size: min(calc(11px / var(--camz)), 52px);
 }
-/* Supporting views (dynamic flow / deployment): same node/edge/badge
-   machinery as the structure bands, rendered at any zoom. */
-.rc-viewedges, .rc-viewlabels { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
-.rc-viewnodes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-.rc-viewnodes .rc-grpnode { pointer-events: auto; }
-.rc-viewedges polyline {
-    stroke: var(--ds-teal);
-    stroke-width: calc(2.5px / var(--camz));
-    opacity: 0.55;
-}
 /* Section level: each card group is owned by its C4 container label;
    the old free-floating concept edges are gone */
 .rc-seclabel {
@@ -696,7 +686,10 @@ a, .rc-card a { color: var(--ds-ink); }
     pointer-events: none; background: transparent;
     justify-content: flex-start; align-items: center;
 }
-.rc-grp .rc-node-boundary .rc-grpcount, .rc-grp .rc-node-boundary .rc-kindtag, .rc-grp .rc-node-boundary .rc-grplabel { display: none; }
+.rc-grp .rc-node-boundary .rc-grpcount, .rc-grp .rc-node-boundary .rc-kindtag { display: none; }
+.rc-grp .rc-node-boundary { align-items: flex-start; padding: 8px 16px; }
+.rc-grp .rc-node-boundary .rc-grplabel { display: block; background: transparent; padding: 0; font-size: min(calc(10px / var(--camz)), 44px); color: var(--c4-system-ink); font-weight: 600; letter-spacing: .02em; }
+.rc-grp .rc-node-boundary .rc-grplabel::after { content: ' - system boundary'; font-weight: 400; }
 /* Sub lines on the people/external boxes are illegible texture at system-
    band zooms (24px world < 3px screen): hide them there; kinds stay cued
    by color/border/shape and the docked key's legend. */
@@ -708,8 +701,7 @@ a, .rc-card a { color: var(--ds-ink); }
    review marks, findings, links, navigation) lives in the dock menu and the
    reading sheet outside the territory. */
 .rc-world .rc-card, .rc-world .rc-card *, .rc-world .rc-frame,
-.rc-world .rc-groups .rc-grpnode, .rc-world .rc-sysnodes .rc-grpnode,
-.rc-world .rc-viewnodes .rc-grpnode { pointer-events: none !important; }
+.rc-world .rc-groups .rc-grpnode, .rc-world .rc-sysnodes .rc-grpnode { pointer-events: none !important; }
 .rc-world .rc-card { overflow: hidden; }
 /* Detail LOD on the SAME fixed card shape: at the near bands the summary
    appears under the head, clamped; the full text and all controls stay in
@@ -729,3 +721,34 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-grp .rc-frame-row1 { flex-wrap: nowrap; }
 .rc-grp .rc-frame-title { display: block; min-width: 0; }
 
+
+/* territory: fixed component/file/declaration layer (world coordinates) */
+.rc-terr { position: absolute; pointer-events: none; overflow: visible; }
+.rc-sys .rc-terr, .rc-grp .rc-terr { display: none; }
+.rc-t-tile { fill: var(--c4-component-tint); stroke: var(--c4-component); stroke-width: 1; }
+.rc-t-shared { stroke-dasharray: 4 2; }
+.rc-t-name { fill: var(--c4-container-ink); font-weight: 600; font-family: inherit; }
+.rc-t-resp { font-size: 4.2px; line-height: 1.3; color: #3b4543; overflow: hidden; font-family: inherit; }
+.rc-t-room { fill: #fff; stroke: #b9c9d9; stroke-width: .4; }
+.rc-t-cap { fill: #1f3a57; font-weight: 600; font-family: ui-monospace, Menlo, monospace; }
+.rc-t-capmeta { fill: #5b6b7a; font-weight: 400; }
+.rc-t-note { fill: #6b6f6e; font-style: italic; font-family: inherit; }
+.rc-cm-chip rect { fill: #e8eef6; stroke: #8aa4c0; stroke-width: .25; }
+.rc-cm-chip text { fill: #14283d; }
+.rc-cm-in rect { fill: #f3f6fa; }
+.rc-cm-ty rect { fill: #efe9f6; stroke: #a392bd; }
+.rc-cm-jb rect, .rc-cm-st rect { fill: #e9f4ec; stroke: #86b394; }
+.rc-cm-hd rect, .rc-cm-dp rect { fill: #f6f0e4; stroke: #c4aa73; }
+.rc-cm-edge { stroke: #7d8fa3; stroke-width: .25; opacity: .55; }
+.rc-cm-edge-imp { stroke: #c2601f; stroke-dasharray: 1 .6; opacity: .8; }
+.rc-ce polyline { stroke: #2f6bab; stroke-width: calc(1.5px / var(--camz)); }
+.rc-ce text { fill: #2f6bab; paint-order: stroke; stroke: #fff; stroke-width: 3px; font-family: inherit; }
+.rc-cm-k-calls { stroke: #1f5fa8; opacity: .85; stroke-width: .35; }
+.rc-cm-k-type { stroke: #8a73b0; opacity: .4; }
+.rc-cm-k-renders { stroke: #2e8b57; opacity: .8; }
+.rc-trail polyline { stroke: #b8860b; stroke-width: calc(1px / var(--camz)); stroke-dasharray: 4 3; opacity: .35; fill: none; }
+.rc-trail-on polyline { stroke-width: calc(2.2px / var(--camz)); opacity: .95; stroke-dasharray: none; }
+.rc-trail text { fill: #7a5a06; font-family: inherit; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.rc-zone { fill: #6b6f6e; font-style: italic; font-family: inherit; }
+.rc-menu-note { font-size: 12px; opacity: .85; }
+.rc-menu-note span { opacity: .7; }

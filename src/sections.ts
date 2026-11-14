@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ 26619ed by gen_sections.py - do not hand-edit.
-export const COMMIT = "26619ed2334a21e214c08b2cb6208103e6ac6441";
-export const COMMIT_SHORT = "26619ed";
+// Generated from irvan-putra/vana @ 4f99634 by gen_sections.py - do not hand-edit.
+export const COMMIT = "4f99634dba8278d2cda8f97f85f8b42d10f1442a";
+export const COMMIT_SHORT = "4f99634";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -14,7 +14,11 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "App.tsx",
-        "lines": 2015
+        "lines": 1934
+      },
+      {
+        "path": "territory.tsx",
+        "lines": 250
       },
       {
         "path": "main.tsx",
@@ -30,7 +34,7 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "static.css",
-        "lines": 731
+        "lines": 760
       },
       {
         "path": "src/style.css",
@@ -41,8 +45,8 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "ae28072f9f55",
-    "totalLines": 2952
+    "digest": "2e56f2d8affe",
+    "totalLines": 3150
   },
   {
     "id": "content-data",
@@ -59,7 +63,12 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "src/code.ts",
-        "lines": 498,
+        "lines": 684,
+        "note": "generated - excluded from digest"
+      },
+      {
+        "path": "src/codemap.ts",
+        "lines": 23,
         "note": "generated - excluded from digest"
       }
     ],
@@ -67,30 +76,42 @@ export const SECTIONS: Section[] = [
       "The generators read a checkout, so a stale checkout means stale cards - the pinned commit on each card is the tell"
     ],
     "digest": "e3b0c44298fc",
-    "totalLines": 498
+    "totalLines": 707
   },
   {
     "id": "generators",
     "title": "Content generators",
     "tag": "Tools - Python",
     "icon": "🏭",
-    "purpose": "The two CLIs that regenerate the review content from a local vana checkout. Run by hand, never in CI.",
+    "purpose": "The CLIs and helpers that regenerate the review content from a local vana checkout. Run by hand, never in CI.",
     "link": "tools",
     "files": [
       {
         "path": "tools/gen_sections.py",
-        "lines": 137
+        "lines": 142
       },
       {
         "path": "tools/gen_code.py",
-        "lines": 363
+        "lines": 413
+      },
+      {
+        "path": "tools/codemap_scan.py",
+        "lines": 391
+      },
+      {
+        "path": "tools/ast_ts.mjs",
+        "lines": 123
+      },
+      {
+        "path": "tools/compare_extractors.py",
+        "lines": 41
       }
     ],
     "notChecked": [
       "Curated component names and section assignments inside the generators are judgment, reviewed only by reading them here"
     ],
-    "digest": "515218b248bf",
-    "totalLines": 500
+    "digest": "a5441a60bdbd",
+    "totalLines": 1110
   },
   {
     "id": "build-deploy",
@@ -106,11 +127,11 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "package.json",
-        "lines": 13
+        "lines": 14
       },
       {
         "path": "package-lock.json",
-        "lines": 530
+        "lines": 545
       },
       {
         "path": ".github/workflows/deploy.yml",
@@ -124,8 +145,8 @@ export const SECTIONS: Section[] = [
     "notChecked": [
       "A failed deploy rollback (verify_live.sh only proves the new bytes went live, not that an old page returns on failure)"
     ],
-    "digest": "342b79e22f8c",
-    "totalLines": 741
+    "digest": "72a900bfdc58",
+    "totalLines": 757
   },
   {
     "id": "docs-meta",
@@ -137,15 +158,15 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "README.md",
-        "lines": 62
+        "lines": 93
       },
       {
         "path": ".gitignore",
-        "lines": 2
+        "lines": 3
       }
     ],
     "notChecked": [],
-    "digest": "476fe4fed434",
-    "totalLines": 64
+    "digest": "6b377d14f003",
+    "totalLines": 96
   }
 ];
