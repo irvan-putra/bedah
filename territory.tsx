@@ -238,15 +238,39 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 if (g) g.n++; else agg.set(k, { a, b, n: 1, fa, fb });
             }
             const routes = routeFilePairs(tiles, [...agg.values()].map((g) => ({ fa: g.fa, fb: g.fb })));
-            for (const g of agg.values()) {
+            const lines = [...agg.values()].map((g) => {
                 const pts = routes.get(g.fa + '>' + g.fb) ?? [];
                 const line: [number, number][] = pts.length >= 2 ? pts : [[g.a.x + g.a.w / 2, g.a.y + g.a.h / 2], [g.b.x + g.b.w / 2, g.b.y + g.b.h / 2]];
-                // label sits on the longest segment; neighbours use different positions so labels do not stack
-                let bi = 0, bl = -1;
-                for (let k = 1; k < line.length; k++) { const l = Math.abs(line[k][0] - line[k - 1][0]) + Math.abs(line[k][1] - line[k - 1][1]); if (l > bl) { bl = l; bi = k; } }
-                const fr = [0.5, 0.22, 0.78][i % 3];
-                const mid = [line[bi - 1][0] + (line[bi][0] - line[bi - 1][0]) * fr, line[bi - 1][1] + (line[bi][1] - line[bi - 1][1]) * fr];
-                edgeLines.push(<g key={i++}><polyline points={line.map((q) => q.join(',')).join(' ')} className="rc-cm-file" markerEnd="url(#rc-ce-arr)" /><text x={mid[0]} y={mid[1] - 1.5} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: zq >= 3.2 ? csFont(11, 8) : csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
+                return { g, line };
+            });
+            // greedy label placement: try spots along every segment, keep the one that crosses the fewest
+            // other lines and overlaps no earlier label
+            const fsz = zq >= 3.2 ? Math.min(11 / zq, 8) : Math.min(7 / zq, 5);
+            const placed: [number, number, number, number][] = [];
+            const hitSeg = (r: [number, number, number, number], p: [number, number], q: [number, number]) => {
+                for (let s = 0; s <= 8; s++) { const x = p[0] + (q[0] - p[0]) * s / 8, y = p[1] + (q[1] - p[1]) * s / 8; if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]) return true; }
+                return false;
+            };
+            for (const { g, line } of lines) {
+                const text = `${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`;
+                const w = text.length * fsz * 0.62 + fsz * 1.5;
+                let best: { x: number; y: number; sc: number } | null = null;
+                for (let k = 1; k < line.length; k++) {
+                    const p = line[k - 1], q = line[k];
+                    const len = Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]);
+                    if (len < w * 0.6) continue;
+                    for (let f = 0.1; f <= 0.91; f += 0.1) {
+                        const x = p[0] + (q[0] - p[0]) * f, y = p[1] + (q[1] - p[1]) * f;
+                        const r: [number, number, number, number] = [x - w / 2, y - fsz - 1.5, x + w / 2, y - 1.5];
+                        let sc = Math.abs(f - 0.5) * 2 + (Math.abs(q[1] - p[1]) > Math.abs(q[0] - p[0]) ? 6 : 0) + (len < w ? 3 : 0);
+                        for (const o of lines) { if (o.g === g) continue; for (let m = 1; m < o.line.length; m++) if (hitSeg(r, o.line[m - 1], o.line[m])) sc += 4; }
+                        for (const pr of placed) if (r[0] < pr[2] && r[2] > pr[0] && r[1] < pr[3] && r[3] > pr[1]) sc += 20;
+                        if (!best || sc < best.sc) best = { x, y, sc };
+                    }
+                }
+                if (!best) { const p = line[0], q = line[line.length - 1]; best = { x: (p[0] + q[0]) / 2, y: (p[1] + q[1]) / 2, sc: 0 }; }
+                placed.push([best.x - w / 2, best.y - fsz - 1.5, best.x + w / 2, best.y - 1.5]);
+                edgeLines.push(<g key={i++}><polyline points={line.map((q) => q.join(',')).join(' ')} className="rc-cm-file" markerEnd="url(#rc-ce-arr)" /><text x={best.x} y={best.y - 1.5} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: zq >= 3.2 ? csFont(11, 8) : csFont(7, 5) }}>{text}</text></g>);
             }
         } else {
             for (const e of CM_EDGES) {
