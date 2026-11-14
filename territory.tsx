@@ -147,6 +147,73 @@ const KIND_CLASS: Record<string, string> = { function: 'fn', 'inner function': '
 // font size that stays screen-constant (counter-scaled) but never exceeds fit
 const csFont = (screenPx: number, capWorld: number) => `min(calc(${screenPx}px / var(--camz)), ${capWorld}px)`;
 
+
+// ---- file-pair routing: orthogonal paths around every other room and tile heading ----
+// Grid A* (turn-penalised) over the territory with all rooms, tile names and responsibility text as obstacles except
+// the two endpoint rooms. Computed once, lazily. A pair with no free path falls back to a straight line.
+let PAIR_CACHE: Map<string, [number, number][]> | null = null;
+function routeFilePairs(tiles: Record<string, TileGeo>, pairs: { fa: string; fb: string }[]): Map<string, [number, number][]> {
+    if (PAIR_CACHE) return PAIR_CACHE;
+    const CELL = 3;
+    const rooms: Record<string, Rect> = {};
+    const obst: { r: Rect; room?: string }[] = [];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const tl of Object.values(tiles)) {
+        x0 = Math.min(x0, tl.rect.x); y0 = Math.min(y0, tl.rect.y); x1 = Math.max(x1, tl.rect.x + tl.rect.w); y1 = Math.max(y1, tl.rect.y + tl.rect.h);
+        obst.push({ r: tl.head }, { r: tl.resp });
+        for (const rm of tl.rooms) { rooms[rm.file] = rm.rect; obst.push({ r: rm.rect, room: rm.file }); }
+    }
+    x0 -= 40; y0 -= 40; x1 += 40; y1 += 40;
+    const W = Math.ceil((x1 - x0) / CELL), H = Math.ceil((y1 - y0) / CELL);
+    const out = new Map<string, [number, number][]>();
+    const cell = (x: number, y: number): [number, number] => [Math.min(W - 1, Math.max(0, Math.round((x - x0) / CELL))), Math.min(H - 1, Math.max(0, Math.round((y - y0) / CELL)))];
+    for (const p of pairs) {
+        const key = p.fa + '>' + p.fb;
+        const A = rooms[p.fa], B = rooms[p.fb];
+        if (!A || !B) continue;
+        const blocked = new Uint8Array(W * H);
+        for (const o of obst) {
+            if (o.room === p.fa || o.room === p.fb) continue;
+            const [ax, ay] = cell(o.r.x - 1.5, o.r.y - 1.5), [bx, by] = cell(o.r.x + o.r.w + 1.5, o.r.y + o.r.h + 1.5);
+            for (let yy = ay; yy <= by; yy++) for (let xx = ax; xx <= bx; xx++) blocked[yy * W + xx] = 1;
+        }
+        const [sx, sy] = cell(A.x + A.w / 2, A.y + A.h / 2), [tx, ty] = cell(B.x + B.w / 2, B.y + B.h / 2);
+        const N = W * H * 4, g = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1);
+        const heap: [number, number][] = [];
+        const push = (f: number, s: number) => { heap.push([f, s]); let i = heap.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (heap[q][0] <= heap[i][0]) break; [heap[q], heap[i]] = [heap[i], heap[q]]; i = q; } };
+        const pop = () => { const top = heap[0], last = heap.pop()!; if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+        const DX = [1, -1, 0, 0], DY = [0, 0, 1, -1];
+        for (let d = 0; d < 4; d++) { g[(sy * W + sx) * 4 + d] = 0; push(Math.abs(sx - tx) + Math.abs(sy - ty), (sy * W + sx) * 4 + d); }
+        let goal = -1, guard = N * 2;
+        while (heap.length && guard-- > 0) {
+            const [, s] = pop(); const d = s & 3, c = s >> 2, cx2 = c % W, cy2 = (c - cx2) / W;
+            if (cx2 === tx && cy2 === ty) { goal = s; break; }
+            for (let nd = 0; nd < 4; nd++) {
+                const nx = cx2 + DX[nd], ny = cy2 + DY[nd];
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H || blocked[ny * W + nx]) continue;
+                const ns = (ny * W + nx) * 4 + nd, ng = g[s] + 1 + (nd === d ? 0 : 6);
+                if (ng < g[ns]) { g[ns] = ng; from[ns] = s; push(ng + Math.abs(nx - tx) + Math.abs(ny - ty), ns); }
+            }
+        }
+        let pts: [number, number][] = [];
+        if (goal >= 0) {
+            const raw: [number, number][] = [];
+            for (let s = goal; s !== -1; s = from[s]) { const c = s >> 2, cx2 = c % W; raw.push([x0 + cx2 * CELL, y0 + ((c - cx2) / W) * CELL]); }
+            raw.reverse();
+            // drop collinear points, then trim to the endpoint rooms' borders
+            const inR = (r: Rect, q: [number, number]) => q[0] >= r.x && q[0] <= r.x + r.w && q[1] >= r.y && q[1] <= r.y + r.h;
+            let a = 0, b = raw.length - 1;
+            while (a < b && inR(A, raw[a + 1])) a++;
+            while (b > a && inR(B, raw[b - 1])) b--;
+            const seg = raw.slice(a, b + 1);
+            for (let i = 0; i < seg.length; i++) if (i === 0 || i === seg.length - 1 || (seg[i][0] - seg[i - 1][0]) * (seg[i + 1][1] - seg[i][1]) !== (seg[i][1] - seg[i - 1][1]) * (seg[i + 1][0] - seg[i][0])) pts.push(seg[i]);
+        }
+        out.set(key, pts);
+    }
+    PAIR_CACHE = out;
+    return out;
+}
+
 export const Territory = React.memo(function Territory({ tiles, zq, edges, trails, trail, tags, edgeMode, edgeFile }: { edgeMode: 'files' | 'file' | 'all' | 'off'; edgeFile: string | null; tiles: Record<string, TileGeo>; zq: number; edges: CompEdge[]; trails: Trail[]; trail: string; tags: ZoneTag[] }) {
     const decl = new Map<string, Rect>();
     for (const t of Object.values(tiles)) for (const r of t.rooms) for (const c of r.chips) decl.set(c.d.id, c.r);
@@ -170,16 +237,16 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 const k = fa + '>' + fb; const g = agg.get(k);
                 if (g) g.n++; else agg.set(k, { a, b, n: 1, fa, fb });
             }
+            const routes = routeFilePairs(tiles, [...agg.values()].map((g) => ({ fa: g.fa, fb: g.fb })));
             for (const g of agg.values()) {
-                // start and end on each room's border (toward the other room), not at its center
-                const edge = (r: Rect, tx: number, ty: number): [number, number] => {
-                    const ccx = r.x + r.w / 2, ccy = r.y + r.h / 2, dx = tx - ccx, dy = ty - ccy;
-                    const s = Math.min(dx ? (r.w / 2) / Math.abs(dx) : Infinity, dy ? (r.h / 2) / Math.abs(dy) : Infinity, 1);
-                    return [ccx + dx * s, ccy + dy * s];
-                };
-                const [x1, y1] = edge(g.a, g.b.x + g.b.w / 2, g.b.y + g.b.h / 2);
-                const [x2, y2] = edge(g.b, g.a.x + g.a.w / 2, g.a.y + g.a.h / 2);
-                edgeLines.push(<g key={i++}><line x1={x1} y1={y1} x2={x2} y2={y2} className="rc-cm-file" /><text x={(x1 + x2) / 2} y={(y1 + y2) / 2} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
+                const pts = routes.get(g.fa + '>' + g.fb) ?? [];
+                const line: [number, number][] = pts.length >= 2 ? pts : [[g.a.x + g.a.w / 2, g.a.y + g.a.h / 2], [g.b.x + g.b.w / 2, g.b.y + g.b.h / 2]];
+                // label sits on the longest segment; neighbours use different positions so labels do not stack
+                let bi = 0, bl = -1;
+                for (let k = 1; k < line.length; k++) { const l = Math.abs(line[k][0] - line[k - 1][0]) + Math.abs(line[k][1] - line[k - 1][1]); if (l > bl) { bl = l; bi = k; } }
+                const fr = [0.5, 0.22, 0.78][i % 3];
+                const mid = [line[bi - 1][0] + (line[bi][0] - line[bi - 1][0]) * fr, line[bi - 1][1] + (line[bi][1] - line[bi - 1][1]) * fr];
+                edgeLines.push(<g key={i++}><polyline points={line.map((q) => q.join(',')).join(' ')} className="rc-cm-file" markerEnd="url(#rc-ce-arr)" /><text x={mid[0]} y={mid[1] - 1.5} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
             }
         } else {
             for (const e of CM_EDGES) {
