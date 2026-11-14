@@ -1483,7 +1483,7 @@ const compTileSize = (gid: string, n: number) => {
     // label pills would render tinier than the screen-constant node text and
     // pile onto the GitHub pair, so they stay in the docked key until the
     // map is zoomed in enough to read them.
-    const grpFar = cam.z < 0.28;
+    const grpFar = cam.z < 0.16;
     const grpRels: RelGeom[] = [...C4_RELS, ...GRP_EXTRA_RELS].map((rel) => {
         const a = AUTH_GRP[`${rel.a}-${rel.b}`];
         return { key: `${rel.a}-${rel.b}`, pts: snapEnds(a.pts.map(([x, y]) => ({ x, y })), rel.a, rel.b), bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' ') || undefined, lines: a.lines, hw: a.hw ?? 220, hh: a.hh ?? (a.lines.length > 1 ? 55 : 38), dashed: rel.dashed, hidden: grpFar, auth: true, plain: (rel as C4Rel).plain };
