@@ -246,7 +246,7 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 for (let k = 1; k < line.length; k++) { const l = Math.abs(line[k][0] - line[k - 1][0]) + Math.abs(line[k][1] - line[k - 1][1]); if (l > bl) { bl = l; bi = k; } }
                 const fr = [0.5, 0.22, 0.78][i % 3];
                 const mid = [line[bi - 1][0] + (line[bi][0] - line[bi - 1][0]) * fr, line[bi - 1][1] + (line[bi][1] - line[bi - 1][1]) * fr];
-                edgeLines.push(<g key={i++}><polyline points={line.map((q) => q.join(',')).join(' ')} className="rc-cm-file" markerEnd="url(#rc-ce-arr)" /><text x={mid[0]} y={mid[1] - 1.5} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
+                edgeLines.push(<g key={i++}><polyline points={line.map((q) => q.join(',')).join(' ')} className="rc-cm-file" markerEnd="url(#rc-ce-arr)" /><text x={mid[0]} y={mid[1] - 1.5} textAnchor="middle" className="rc-cm-filelab" style={{ fontSize: zq >= 3.2 ? csFont(11, 8) : csFont(7, 5) }}>{`${g.fa.split('/').pop()} \u2192 ${g.fb.split('/').pop()} (${g.n})`}</text></g>);
             }
         } else {
             for (const e of CM_EDGES) {
