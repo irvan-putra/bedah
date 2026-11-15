@@ -184,6 +184,12 @@ a, .rc-card a { color: var(--ds-ink); }
 }
 .rc-grp .rc-frame-row2 { gap: 0.4em; }
 .rc-lo .rc-frame-label { font-size: calc(min(calc(15px / var(--camz)), 72px, var(--ftmax, 999px)) * var(--lfscale, 1)); }
+/* Code-overview band: the title row alone is the frame's label here. The
+   sub/kind row's world height grows as the fit zoom falls and spills onto
+   the territory tiles below; it stays on the component and detail bands.
+   The label-fit measurer still steps the title down if a wrap would not
+   clear the tile strip. */
+.rc-lo .rc-frame-row2 { display: none; }
 /* Header-fit: the absolute header must clear the
    first card row at the card-visible bands; the renderer steps --lfscale
    down until it does, and drops the sub/kind row if more room is needed. */
@@ -334,6 +340,8 @@ a, .rc-card a { color: var(--ds-ink); }
     stroke-width: calc(3px / var(--camz));
     opacity: 0.72;
 }
+/* Leader lines: thin connector from a floating pill to its own lane. */
+.rc-syslabels .rc-rel-lead { stroke: var(--ds-teal); stroke-width: calc(2px / var(--camz)); opacity: 0.55; fill: none; }
 .rc-sysedges polyline.rc-rel-dash {
     stroke: var(--ds-ink-2);
     stroke-dasharray: calc(10px / var(--camz)) calc(6px / var(--camz));
@@ -437,6 +445,18 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-grp.rc-far .rc-frame-sub, .rc-grp.rc-far .rc-frame-kind { display: none; }
 .rc-sys.rc-sysfar .rc-grpcount, .rc-sys.rc-sysfar .rc-node-boundary .rc-grpcount,
 .rc-sys.rc-sysfar .rc-node-boundary .rc-kindtag { display: none; }
+.rc-sys.rc-sysfar .rc-node-syschip .rc-grpcount,
+.rc-sys.rc-sysfar .rc-node-syschip .rc-kindtag { display: none; }
+/* System band: the vana system renders as a compact solid chip (C4 System
+   Context style - the system is one box at this level), not the giant
+   dashed boundary that encloses the frame complex at deeper bands. The
+   boundary returns with the frames one level in. Text is inverse-scaled
+   with caps, same pattern as the boundary label, so the chip is a fixed
+   world rect and authored lanes attach to exact borders. */
+.rc-sys .rc-node-syschip { border: 3px solid var(--c4-system); background: var(--c4-system-tint); border-radius: 18px; justify-content: center; align-items: center; text-align: center; padding: 0; }
+.rc-sys .rc-node-syschip .rc-grplabel { background: transparent; padding: 0; font-size: max(28px, min(calc(15px / var(--camz)), 140px)); }
+.rc-sys .rc-node-syschip .rc-grpcount { display: block; font-size: max(20px, min(calc(9px / var(--camz)), 90px)); }
+.rc-sys .rc-node-syschip .rc-kindtag { display: inline-block; font-size: max(18px, min(calc(8px / var(--camz)), 80px)); }
 .rc-node-system {
     background: var(--c4-system-tint);
     border-color: var(--c4-system);
@@ -739,6 +759,9 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-t-resp { font-size: 4.2px; line-height: 1.3; color: #3b4543; overflow: hidden; font-family: inherit; }
 .rc-t-room { fill: #fff; stroke: #b9c9d9; stroke-width: .4; }
 .rc-t-cap { fill: #1f3a57; font-weight: 600; font-family: ui-monospace, Menlo, monospace; }
+.rc-t-frow { fill: #1f3a57; }
+.rc-t-frow-more { fill: #5b6b7a; font-style: italic; }
+.rc-t-focus { fill: none; stroke: #2f6fb2; stroke-dasharray: 7 5; }
 .rc-t-capmeta { fill: #5b6b7a; font-weight: 400; }
 .rc-t-note { fill: #6b6f6e; font-style: italic; font-family: inherit; }
 .rc-cm-chip rect { fill: #e8eef6; stroke: #8aa4c0; stroke-width: .25; }

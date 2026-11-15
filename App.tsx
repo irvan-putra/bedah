@@ -3,7 +3,7 @@ import { TextLink, useLocalState } from './files-shim';
 import { COMMIT, COMMIT_SHORT, SECTIONS, Section } from './src/sections';
 import { COMPONENTS, COMPONENT_REFS, CODE_FILES, CODE_COMMIT_SHORT, C4Component } from './src/code';
 import { CM_EDGE_KINDS, CM_DECLS, CM_DOCREFS, CM_FILES } from './src/codemap';
-import { Territory, layoutTerritory, routeCompEdges, routeTrails, zoneTags } from './territory';
+import { Territory, layoutTerritory, routeCompEdges, routeTrails, zoneTags, IN_Y } from './territory';
 
 type Pos = { x: number; y: number };
 type Cam = { x: number; y: number; z: number };
@@ -24,7 +24,12 @@ const ZMIN = 0.07, ZMAX = 16;
 //                under their C4 container labels, no per-file detail;
 //                tap a card to focus it
 //   otherwise    detail level: the full review cards, unchanged
-const SYS_Z = 0.09;
+// SYS_Z caps the system-context band. At 0.09 the C1 fit on a phone was
+// forced down to z~0.085, where the whole diagram rendered at ~2/3 of the
+// screen width (crowded pills, overlapping flank boxes, dead space below).
+// 0.13 lets the actual content fit (~0.108 on a 390px phone) stay inside
+// the band, so the diagram fills the screen width at the C1 landing.
+const SYS_Z = 0.13;
 const GROUP_Z = 0.28;
 const COMP_Z = 0.42;
 const LO_Z = 0.6;
@@ -194,6 +199,9 @@ const SYS_BOX = (() => {
     const y0 = 508, y1 = Math.max(...fs.map((f) => f.y + f.h)) + 52;
     return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, hw: (x1 - x0) / 2, hh: (y1 - y0) / 2 };
 })();
+// System band renders the system as this compact fixed-world chip (C4
+// System Context style); AUTH_SYS lanes attach to its exact borders.
+const SYS_CHIP = { x: 1200, y: 900, hw: 360, hh: 150 };
 const TERR_TILES = layoutTerritory(TERR_FRAMES);
 const TERR_EDGES = routeCompEdges(TERR_TILES, TERR_FRAMES);
 const TERR_TRAILS = routeTrails(TERR_TILES, TERR_FRAMES);
@@ -261,7 +269,7 @@ type GroupNode = { g: C4Node; x: number; y: number; hw: number; hh: number };
 // crosses an unrelated box, insert a perpendicular detour waypoint beyond
 // that box and re-check. Badge goes on the longest unobstructed segment,
 // beside the line, flipping sides if it would sit on a box.
-type RelGeom = { key: string; pts: Pos[]; bx: number; by: number; r: number; label?: string; lines?: string[]; hw?: number; hh?: number; dashed?: boolean; hidden?: boolean; auth?: boolean; plain?: boolean };
+type RelGeom = { key: string; pts: Pos[]; bx: number; by: number; r: number; label?: string; lines?: string[]; hw?: number; hh?: number; lead?: number; dashed?: boolean; hidden?: boolean; auth?: boolean; plain?: boolean };
 // short on-map edge text: provenance after " · " and ";" detail stay in the
 // docked key, and a trailing parenthetical is dropped (the dashed style +
 // legend already say "manual run"); the key always lists the full relation
@@ -726,6 +734,9 @@ function Canvas() {
     const [focusedId, setFocusedId] = useState<string | null>(null);
     const [sheetGroup, setSheetGroup] = useState<string | null>(null);
     const [jumpOpen, setJumpOpen] = useState(false);
+    // Ring around the last Jump target (a room or a tile); cleared by the
+    // next level/Fit/concept navigation, kept across pans and zooms.
+    const [jumpFocus, setJumpFocus] = useState<{ kind: 'room' | 'tile'; id: string } | null>(null);
     const [dock, setDock] = useState<'none' | 'menu' | 'legend'>('none');
     // one canvas: the old whole-canvas view switches are gone
     const [trail, setTrail] = useState<'none' | 'ship' | 'refresh'>('none');
@@ -906,6 +917,20 @@ function Canvas() {
         }
         return { z: c.z, cx: c.x, cy: c.y, h, fh };
     }
+    // Fit one container territory frame into the viewport. Shared by the C4
+    // shortcut, container taps and Fit at the code levels. The fit is
+    // computed from the frame's real bounds, never a fixed constant: on a
+    // phone the whole frame fits below the detail band, where the territory
+    // renders its per-file rows; on wide screens the fit lands near the room
+    // tier, so snap up into it to arrive at rooms instead of empty tiles.
+    function terrFrameFit(f: { x: number; y: number; w: number; h: number }, w: number, fh: number): { z: number; cx: number; cy: number } {
+        let z = clampZ(Math.min(w / (f.w + 80), fh / (f.h + 80)) * 0.98);
+        if (z >= 1.15 && z < 1.4) z = 1.42;
+        // never land wider than the code-overview band: a container arrival
+        // shows the code level's file rows, not the component overview
+        z = Math.max(z, COMP_Z + 0.01);
+        return { z, cx: f.x + f.w / 2, cy: f.y + f.h / 2 };
+    }
     // Fit map re-frames the level the camera is on. A whole-map union fit
     // always lands at the container band, which made Fit useless from the
     // other levels. Fit now frames the current zoom band's own content:
@@ -927,7 +952,7 @@ function Canvas() {
             // stay inside the system band so the C1 rendering stays on
             const z = clampZ(Math.min(Math.min(w / (b.x1 - b.x0 + 80), fh / (b.y1 - b.y0 + 80)) * 0.98, SYS_Z * 0.94));
             c = { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 + (h - fh) / (2 * z), z };
-        } else if (band === 'comp' || band === 'lo') {
+        } else if (band === 'comp') {
             // Re-frame the component level itself (same landing as the C3
             // shortcut): fitting every container frame would zoom a phone
             // out of this band entirely.
@@ -936,21 +961,30 @@ function Canvas() {
             if (!app) return;
             const z = COMP_Z * 0.93;
             c = { x: app.x, y: app.y + (h - fh) / (2 * z), z };
-        } else if (band === 'detail') {
-            // The container territory under the camera (nearest frame center)
-            // at the C4 entry zoom: re-frame the code map you are reading,
-            // never an escape back to the container band.
-            let bx = 0, by = 0, bd = Infinity, found = false;
-            for (const fr of Object.values(NEST_EST.frames)) {
-                const cx = fr.x + fr.w / 2, cy = fr.y + fr.h / 2;
+        } else if (band === 'lo' || band === 'detail') {
+            // The container territory under the camera (nearest frame center),
+            // FIT to the viewport: the old fixed z=1.4 re-frame landed phones
+            // inside one clipped tile with decluttered (empty) rooms. Fit is
+            // computed from the frame's real bounds and stays at the code
+            // levels - never an escape back to the container band.
+            let fr: { x: number; y: number; w: number; h: number } | null = null;
+            let bd = Infinity;
+            for (const frr of Object.values(NEST_EST.frames)) {
+                const cx = frr.x + frr.w / 2, cy = frr.y + frr.h / 2;
                 const d = Math.hypot(cx - cam.x, cy - cam.y);
-                if (d < bd) { bd = d; bx = cx; by = cy; found = true; }
+                if (d < bd) { bd = d; fr = frr; }
             }
-            if (!found) return;
-            const z = 1.4;
-            c = { x: bx, y: by + (h - fh) / (2 * z), z };
+            if (!fr) return;
+            const tf = terrFrameFit(fr, w, fh);
+            c = { x: tf.cx, y: tf.cy + (h - fh) / (2 * tf.z), z: tf.z };
         } else {
-            c = { x: f.cx, y: f.cy + (f.h - fh) / (2 * f.z), z: f.z };
+            // Container band: fit the whole union but stay inside the band -
+            // the union fit zoom sits below SYS_Z on phones since the sys
+            // band widened, which would silently flip Fit to the C1 rendering.
+            const z = Math.min(Math.max(f.z, SYS_Z * 1.08), GROUP_Z * 0.93);
+            const b = contentBounds('grp');
+            const bcx = b ? (b.x0 + b.x1) / 2 : f.cx, bcy = b ? (b.y0 + b.y1) / 2 : f.cy;
+            c = { x: bcx, y: bcy + (f.h - fh) / (2 * z), z };
         }
         // no-op guard: resize feedback (iframe height ping-pong) must not
         // turn into a setState/persist storm
@@ -980,6 +1014,7 @@ function Canvas() {
         return isFinite(x0) && x1 > x0 && y1 > y0 ? { x0, y0, x1, y1 } : null;
     }
     function bandView(level: 'sys' | 'grp' | 'comp' | 'code') {
+        setJumpFocus(null);
         const el = vpRef.current;
         const w = el ? el.clientWidth : vp.w, h = el ? el.clientHeight : vp.h;
         if (!w || !h) return;
@@ -1005,11 +1040,12 @@ function Canvas() {
             const app = frames.find((n) => n.g.id === 'c-app') ?? frames[0];
             c = { x: app.x, y: app.y + (h - fh) / (2 * z), z };
         } else if (level === 'code') {
-            // Land on the app territory's top-left: the frame label strip and
-            // the first file lanes give a recognizable entry, not chopped
-            // anonymous lane interiors.
-            const z = 1.4;
-            c = { x: 900, y: 680 + (h - fh) / (2 * z), z };
+            // Land on the app territory FIT to the screen: the whole frame
+            // with its component tiles and per-file rows is a recognizable
+            // code-level entry; the old fixed z=1.4 clipped one tile per
+            // phone screen with decluttered (empty) rooms.
+            const tf = terrFrameFit(NEST_EST.frames['c-app'], w, fh);
+            c = { x: tf.cx, y: tf.cy + (h - fh) / (2 * tf.z), z: tf.z };
         } else {
             if (!f) return;
             const z = level === 'sys' ? Math.min(f.z, SYS_Z * 0.94) : Math.min(Math.max(f.z, SYS_Z * 1.08), GROUP_Z * 0.93);
@@ -1022,6 +1058,7 @@ function Canvas() {
 
     const focusCard = (id: string) => {
         viewTouched.current = true;
+        setJumpFocus(null);
         setFocusedId(id);
         // Measure the real rendered card. CARD_SIZES holds estimates that run
         // tall (480 vs ~434 actual), which clipped the card top in focus mode.
@@ -1053,16 +1090,12 @@ function Canvas() {
     const focusTile = (cid: string) => {
         viewTouched.current = true;
         const r = TERR_TILES[cid].rect;
-        // floor 2.3 as in focusRoom: a tile tap keeps arriving at named
-        // declaration chips, not rooms emptied by the declutter tier
-        const z = clampZ(Math.min(Math.max(Math.min((evp.w - 20) / r.w, (evp.h * 0.7) / r.h), 2.3), 6));
-        // A tile taller than the viewport at this zoom top-aligns instead of
-        // centering, so its label is never cropped off the top edge; wider
-        // than the viewport it left-aligns, so the tile name and the first
-        // chips stay visible (the rest is a pan away).
-        const cy = r.h * z > evp.h * 0.85 ? r.y + (evp.h * 0.42) / z : r.y + r.h / 2;
-        const cx = r.w * z > evp.w * 0.9 ? r.x + (evp.w * 0.46) / z : r.x + r.w / 2;
-        const c = clampCam({ x: cx, y: cy, z });
+        // Fit the tile like focusRoom fits a room: chip-tier arrival when the
+        // whole tile fits there, otherwise the deepest whole-tile fit - and
+        // ring it, so a phone frames the target instead of clipping it.
+        const z = fitTierZoom(r.w, r.h);
+        const c = clampCam({ x: r.x + r.w / 2, y: r.y + r.h / 2, z });
+        setJumpFocus({ kind: 'tile', id: cid });
         setCam(c); persist(c, pos, reviews);
     };
 
@@ -1073,6 +1106,7 @@ function Canvas() {
     const focusSysNode = (id: string) => {
         viewTouched.current = true;
         if (id === 's-vana') { bandView('sys'); return; }
+        setJumpFocus(null);
         const n = sysLayout.find((x) => x.g.id === id);
         if (!n) return;
         const el = vpRef.current;
@@ -1096,24 +1130,26 @@ function Canvas() {
         setCam(c); persist(c, pos, reviews);
     };
 
-    // Jump sheet focus for one code file room: lands in the detail band
-    // with the room's declaration chips readable.
+    // Deepest whole-target tier: keep the chip/room arrival when the target
+    // FITS at that tier's zoom; otherwise fall back to a plain viewport fit
+    // so a phone frames the whole target instead of clipping it.
+    function fitTierZoom(w: number, h: number): number {
+        for (const t of [2.3, 1.42]) if (w * t <= evp.w - 20 && h * t <= evp.h * 0.72) return t;
+        return clampZ(Math.min((evp.w - 48) / w, (evp.h * 0.6) / h));
+    }
+    // Jump sheet focus for one code file room: FIT the room into the
+    // viewport (chip-tier zoom when the whole room fits there) and ring it,
+    // so the jumped file is visibly framed on every screen instead of
+    // force-clipped at the chip zoom.
     const focusRoom = (file: string) => {
         viewTouched.current = true;
         for (const t of Object.values(TERR_TILES)) {
             const r = t.rooms.find((rm) => rm.file === file);
             if (!r) continue;
-            // floor 2.3: land where this room's declaration chips render
-            // (they declutter below zq 2.2) - jumping to a code file must
-            // arrive at its code, not an empty room.
-            const z = clampZ(Math.min(Math.max(Math.min((evp.w - 20) / r.rect.w, (evp.h * 0.7) / r.rect.h), 2.3), 6));
-            // A room taller than the viewport at this zoom top-aligns instead
-            // of centering, so the file caption stays on screen; wider than
-            // the viewport it left-aligns, so the filename and the first
-            // chips stay visible (the rest is a pan away).
-            const cy = r.rect.h * z > evp.h * 0.85 ? r.rect.y + (evp.h * 0.42) / z : r.rect.y + r.rect.h / 2;
-            const cx = r.rect.w * z > evp.w * 0.9 ? r.rect.x + (evp.w * 0.46) / z : r.rect.x + r.rect.w / 2;
-            const c = clampCam({ x: cx, y: cy, z });
+            const r2 = r.rect;
+            const z = fitTierZoom(r2.w, r2.h);
+            const c = clampCam({ x: r2.x + r2.w / 2, y: r2.y + r2.h / 2, z });
+            setJumpFocus({ kind: 'room', id: file });
             setCam(c); persist(c, pos, reviews);
             return;
         }
@@ -1121,6 +1157,7 @@ function Canvas() {
 
     const focusGroup = (gid: string) => {
         viewTouched.current = true;
+        setJumpFocus(null);
         const g = C4_CONTAINERS.find((x) => x.id === gid)!;
         // Zoom into the container's nested frame on every device: the parent
         // box stays the frame of reference while its contents are revealed
@@ -1132,11 +1169,11 @@ function Canvas() {
         const f = NEST_EST.frames[gid];
         const bw = f.w, bh = f.h;
         const minX = f.x, minY = f.y;
-        // Fit the group's frame; never land wider than the detail band, so a
-        // container tap always arrives inside the nested frame, even on a
-        // phone where the frame is many viewports wide.
+        // Fit the group's frame; never land wider than the code-overview
+        // band, so a container tap arrives at the whole frame with its file
+        // rows, even on a phone where the frame is many viewports wide.
         const zFit = Math.min(evp.w / (bw + 140), evp.h / (bh + 140), 0.8);
-        const z = clampZ(Math.max(zFit, LO_Z + 0.04));
+        const z = clampZ(Math.max(zFit, COMP_Z + 0.01));
         const c = clampCam({ x: minX + bw / 2, y: minY + bh / 2, z });
         setCam(c); persist(c, pos, reviews);
     };
@@ -1179,13 +1216,22 @@ function Canvas() {
             const next = { ...cur };
             for (const gid of Object.keys(frameLabelRefs.current)) {
                 const el = frameLabelRefs.current[gid];
-                const cards = el?.parentElement?.querySelector('.rc-frame-cards') as HTMLElement | null;
-                if (!el || !cards || cards.offsetParent === null) continue;
-                // real strip = where the first visible card actually starts
-                // (the cards div spans the frame; its padding reserves the strip)
-                const firstCard = ([...cards.children] as HTMLElement[]).find((c) => c.offsetParent !== null);
-                const stripTop = firstCard ? firstCard.offsetTop : cards.offsetTop + (parseFloat(getComputedStyle(cards).paddingTop) || 0);
-                const reserve = stripTop - el.offsetTop;
+                if (!el) continue;
+                const cards = el.parentElement?.querySelector('.rc-frame-cards') as HTMLElement | null;
+                // Where the cards render, the reserve is measured against the
+                // first visible card. At the component/code-overview bands the
+                // cards are hidden and the territory tiles own the strip: they
+                // start IN_Y world px below the frame top, so measure against
+                // that instead - otherwise the inverse-scaled label grows onto
+                // the tiles as the fit zoom falls.
+                let reserve: number;
+                if (cards && cards.offsetParent !== null) {
+                    const firstCard = ([...cards.children] as HTMLElement[]).find((c) => c.offsetParent !== null);
+                    const stripTop = firstCard ? firstCard.offsetTop : cards.offsetTop + (parseFloat(getComputedStyle(cards).paddingTop) || 0);
+                    reserve = stripTop - el.offsetTop;
+                } else {
+                    reserve = IN_Y - el.offsetTop;
+                }
                 const need = el.offsetHeight;
                 const lvl = cur[gid] ?? 0;
                 if (need > reserve + 1 && lvl < 8) { next[gid] = lvl + 1; changed = true; }
@@ -1504,8 +1550,14 @@ function Canvas() {
     // visibility only, never territory).
     const groupLayout: GroupNode[] = [
         ...frameNodes,
-        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.63, 0.045),
-        nodeX('x-ghrepo', 0.94, 0.345), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.705),
+        // People row raised so the edge pills clear the boundary top.
+        nodeP('p-owner', 0.31, 0.03), nodeP('p-visitor', 0.63, 0.03),
+        // The GitHub pipeline stack spreads over the portrait slack: phone
+        // fits are width-limited, so the taller stack costs no zoom and the
+        // boxes and pill lanes gain real separation. fx 0.99 puts the boxes
+        // fully right of the system boundary at every zoom (their rendered
+        // width is screen-constant, so only the lowest zoom matters).
+        nodeX('x-ghrepo', 0.99, 0.27), nodeX('x-gha', 0.99, 0.565), nodeX('x-ghpages', 0.99, 0.86),
     ];
     // System band (c4model.com sample as reference):
     // ONE fixed system footprint per spread - the boundary rect below is the
@@ -1516,9 +1568,9 @@ function Canvas() {
         // Visitor sits a slot left of its first placement: the "serves the
         // page (HTTPS)" pill on the lane into its right edge nearly touched
         // the box on a phone.
-        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.63, 0.045),
+        nodeP('p-owner', 0.31, 0.03), nodeP('p-visitor', 0.63, 0.03),
         nodeX('x-intodo', 0.06, 0.52),
-        nodeX('x-ghrepo', 0.94, 0.345), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.705),
+        nodeX('x-ghrepo', 0.99, 0.27), nodeX('x-gha', 0.99, 0.565), nodeX('x-ghpages', 0.99, 0.86),
     ];
     // Container band edges: the frame-level relationships plus the people
     // edges from the system level. The GitHub pipeline (repo -> Actions ->
@@ -1535,23 +1587,23 @@ function Canvas() {
     // ever suppressed or re-placed by collision heuristics at this band.
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
-        // GitHub pipeline ports (centers: repo y 1115, Actions y 1662,
-        // Pages y 2240, all x 2973): every lane ends on ITS OWN node's
+        // GitHub pipeline ports (centers: repo y 882, Actions y 1803,
+        // Pages y 2723, all x 2973): every lane ends on ITS OWN node's
         // border. Endpoint snap only adjusts along the final segment axis,
         // so each authored lane must sit on the target's territory at every zoom.
-        'c-app-x-ghrepo': { pts: [[1570, 1000], [1900, 1000], [1900, 1210], [2930, 1210]], pill: [2400, 1290], lines: ['source links at', 'pinned commit'], hw: 170 },
+        'c-app-x-ghrepo': { pts: [[1570, 1000], [1900, 1000], [1900, 1180], [2960, 1180], [2960, 1050]], pill: [2400, 1240], lines: ['source links at', 'pinned commit'], hw: 170 },
         // The workflow definition edge enters Actions from the left; its
         // vertical lane crosses the source-links lane with a flyover hop.
-        'c-devsupport-x-gha': { pts: [[2748, 990], [2800, 990], [2800, 1662], [2905, 1662]], pill: [2960, 920], lines: ['defines the build', '+ deploy workflow'], hw: 194 },
+        'c-devsupport-x-gha': { pts: [[2748, 990], [2800, 990], [2800, 1803], [2905, 1803]], pill: [2960, 1170], lines: ['defines the build', '+ deploy workflow'], hw: 194 },
         // Trigger/check-out ride parallel vertical lanes between the repo
         // and Actions boxes; deploy continues the same lane down to Pages,
         // so the whole pipeline reads top to bottom.
-        'x-ghrepo-x-gha': { pts: [[2945, 1245], [2945, 1580]], pill: [2945, 1380], lines: ['push to main', 'triggers'], hw: 130 },
-        'x-gha-x-ghrepo': { pts: [[3035, 1580], [3100, 1580], [3100, 1245], [3035, 1245]], pill: [3100, 1500], lines: ['checks out', 'main source'], hw: 130 },
-        'x-gha-x-ghpages': { pts: [[2945, 1745], [2945, 2080]], pill: [2945, 1910], lines: ['deploys the built', 'site + verifies'], hw: 180 },
+        'x-ghrepo-x-gha': { pts: [[2945, 1070], [2945, 1665]], pill: [2945, 1370], lines: ['push to main', 'triggers'], hw: 130 },
+        'x-gha-x-ghrepo': { pts: [[3035, 1665], [3100, 1665], [3100, 1070], [3035, 1070]], pill: [3100, 1500], lines: ['checks out', 'main source'], hw: 130 },
+        'x-gha-x-ghpages': { pts: [[2945, 1945], [2945, 2560]], pill: [2945, 2252], lines: ['deploys the built', 'site + verifies'], hw: 180 },
         'p-visitor-c-app': { pts: [[1818, 250], [1500, 250], [1500, 560]], pill: [1560, 250], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         // People edges ride the gutter opened above the system boundary
-        // (people row raised to fy 0.07): each pill sits on its own
+        // (people row raised to fy 0.03): each pill sits on its own
         // connector, world-sized like the other authored pills, so it reads
         // at reading zoom and declutters Maps-style at the far band.
         'p-owner-s-vana': { pts: [[1007, 320], [1007, 508]], pill: [1007, 410], lines: ['writes +', 'reviews'], hw: 130 },
@@ -1563,25 +1615,31 @@ function Canvas() {
     // heuristics, so every route + pill here is explicit, world-sized, and
     // never suppressed. Pills reuse the container band's short wording; the
     // docked key keeps the full relation text. Node geometry untouched.
-    const AUTH_SYS: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
-        'p-owner-s-vana': { pts: [[1007, 340], [1007, 508]], pill: [1007, 418], lines: ['writes + reviews'], hw: 510, hh: 78 },
-        'p-visitor-s-vana': { pts: [[2006, 340], [2006, 508]], pill: [2006, 418], lines: ['reads + marks'], hw: 420, hh: 78 },
-        // boundary right edge -> repo top-left; pill above the corner, clear of the repo box
-        's-vana-x-ghrepo': { pts: [[2804, 900], [2900, 900], [2900, 1050]], pill: [2250, 810], lines: ['source links at', 'pinned commit'], hw: 420, hh: 140 },
-        // owner -> repo: over the top of the boundary, down the right side, into the repo top
-        'p-owner-x-ghrepo': { pts: [[1288, 240], [1540, 240], [1540, 540], [3150, 540], [3150, 1050]], pill: [2390, 575], lines: ['pushes source'], hw: 360, hh: 65 },
-        // pipeline lanes between the boxes, pills in the open column left of the flank
-        'x-ghrepo-x-gha': { pts: [[3050, 1245], [3050, 1580]], pill: [2260, 1310], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205 },
-        'x-gha-x-ghrepo': { pts: [[2960, 1580], [2960, 1245]], pill: [2290, 1700], lines: ['checks out', 'main source'], hw: 330, hh: 140 },
-        'x-gha-x-ghpages': { pts: [[3005, 1745], [3005, 2080]], pill: [2220, 2075], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205 },
+    const AUTH_SYS: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number; lead?: number }> = {
+        // people -> system chip: owner drops straight into the chip top;
+        // visitor steps left under the pushes-source lane, then into the top
+        'p-owner-s-vana': { pts: [[1007, 320], [1007, 750]], pill: [1007, 390], lines: ['writes + reviews'], hw: 510, hh: 78 },
+        'p-visitor-s-vana': { pts: [[2006, 320], [2006, 700], [1500, 700], [1500, 750]], pill: [2006, 390], lines: ['reads + marks'], hw: 420, hh: 78 },
+        // chip right edge -> repo left edge, straight across the open middle
+        's-vana-x-ghrepo': { pts: [[1560, 900], [2950, 900]], pill: [2200, 880], lines: ['source links at', 'pinned commit'], hw: 420, hh: 140 },
+        // owner -> repo: up between the people boxes, across the top, down
+        // into the repo top; the descent crosses the pages->visitor lane
+        // where the serves pill paints over it (no visible junction)
+        'p-owner-x-ghrepo': { pts: [[1288, 240], [1600, 240], [1600, -80], [3150, -80], [3150, 690]], pill: [2050, -100], lines: ['pushes source'], hw: 360, hh: 65 },
+        // pipeline lanes between the boxes; pills sit in the open column
+        // left of the flank, each with a short leader line ending exactly
+        // on its own lane (lead = lane x), so association is unambiguous
+        'x-ghrepo-x-gha': { pts: [[3050, 1070], [3050, 1665]], pill: [2260, 1580], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205, lead: 3050 },
+        'x-gha-x-ghrepo': { pts: [[2960, 1665], [2960, 1070]], pill: [2500, 1200], lines: ['checks out', 'main source'], hw: 330, hh: 140, lead: 2960 },
+        'x-gha-x-ghpages': { pts: [[3005, 1945], [3005, 2560]], pill: [2220, 2320], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205, lead: 3005 },
         // pages -> visitor: dedicated lane around the right and top edges
-        'x-ghpages-p-visitor': { pts: [[3254, 2241], [3320, 2241], [3320, 180], [2280, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
-        'x-intodo-s-vana': { pts: [[508, 1662], [900, 1662], [900, 1168]], pill: [1080, 1662], lines: ['one-time', 'extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
+        'x-ghpages-p-visitor': { pts: [[3400, 2723], [3450, 2723], [3450, 180], [2280, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
+        'x-intodo-s-vana': { pts: [[508, 1662], [700, 1662], [700, 900], [840, 900]], pill: [1080, 1662], lines: ['one-time', 'extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
     };
     const authSysGeoms = (snap: boolean): RelGeom[] => SYS_RELS.map((rel) => {
         const a = AUTH_SYS[`${rel.a}-${rel.b}`];
         const pts = a.pts.map(([x, y]) => ({ x, y }));
-        return { key: `${rel.a}-${rel.b}`, pts: snap ? snapEnds(pts, rel.a, rel.b) : pts, bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 400, hh: a.hh ?? 120, dashed: rel.dashed, auth: true, plain: rel.plain };
+        return { key: `${rel.a}-${rel.b}`, pts: snap ? snapEnds(pts, rel.a, rel.b) : pts, bx: a.pill[0], by: a.pill[1], r: 220, label: a.lines.join(' '), lines: a.lines, hw: a.hw ?? 400, hh: a.hh ?? 120, lead: a.lead, dashed: rel.dashed, auth: true, plain: rel.plain };
     });
     // Endpoint snap: external/person node boxes are content-sized with
     // counter-scaled (screen-constant) label text, so their top/bottom
@@ -1783,8 +1841,17 @@ function Canvas() {
                             <span className="rc-grpcount">{g.sub}</span>
                             <span className={`rc-kindtag rc-kindtag-${g.kind}`}>{KIND_TAG[g.kind]}</span>
                         </>;
-                        // not a control: the boundary is territory, tapping it
-                        // must not zoom (no clickables in the map)
+                        // not a control: the system is territory, tapping it
+                        // must not zoom (no clickables in the map).
+                        // System band: compact chip (C4 System Context style -
+                        // one solid box for the whole system); the dashed
+                        // boundary rect belongs to the deeper bands where the
+                        // frame complex renders inside it.
+                        if (band === 'sys') {
+                            return (
+                                <div key={g.id} data-nid={g.id} className={`rc-grpnode rc-node-${g.kind} rc-node-syschip`} style={{ left: SYS_CHIP.x, top: SYS_CHIP.y, width: SYS_CHIP.hw * 2, height: SYS_CHIP.hh * 2 }}>{inner}</div>
+                            );
+                        }
                         return (
                             <div key={g.id} data-nid={g.id} className={`rc-grpnode rc-node-${g.kind} rc-node-boundary`} style={{ left: n.x, top: n.y, width: n.hw * 2, height: n.hh * 2 }}>{inner}</div>
                         );
@@ -1794,13 +1861,22 @@ function Canvas() {
                     {sysRels.map((g) => (g.hidden ? null : (() => {
                         // World-sized pill text: the authored pill is part of
                         // the poster - font and line spacing derive from the
-                        // pill's world height so the composition is identical
+                        // pill's world size so the composition is identical
                         // at every zoom (phone system band ~9-10px screen).
+                        // Intrinsic fit: the font also shrinks to the longest
+                        // line at 0.62em per glyph (same factor as frame
+                        // titles), so text never protrudes past the pill
+                        // border with 14 world px side padding.
                         const lines = g.lines ?? [];
-                        const fs = ((g.hh ?? 60) * 2 - 24) / Math.max(1, lines.length) / 1.2;
+                        const hw2 = g.hw ?? g.r;
+                        const fs = Math.min(
+                            ((g.hh ?? 60) * 2 - 24) / Math.max(1, lines.length) / 1.2,
+                            ...lines.map((ln) => (hw2 * 2 - 28) / Math.max(1, ln.length * 0.62)),
+                        );
                         return (
                             <g key={g.key} className={`rc-rel-badge${g.dashed ? ' rc-rel-badge-dash' : ''}`}>
-                                <rect x={g.bx - (g.hw ?? g.r)} y={g.by - (g.hh ?? g.r)} width={(g.hw ?? g.r) * 2} height={(g.hh ?? g.r) * 2} rx={Math.min(g.hh ?? g.r, 8 / cam.z)} />
+                                {g.lead !== undefined ? <line className="rc-rel-lead" x1={g.bx + hw2} y1={g.by} x2={g.lead} y2={g.by} /> : null}
+                                <rect x={g.bx - hw2} y={g.by - (g.hh ?? g.r)} width={hw2 * 2} height={(g.hh ?? g.r) * 2} rx={Math.min(g.hh ?? g.r, 8 / cam.z)} />
                                 {lines.map((ln, li) => (
                                     <text key={li} x={g.bx} y={g.by + (li - (lines.length - 1) / 2) * (fs * 1.2)} style={{ fontSize: fs }}>{ln}</text>
                                 ))}
@@ -1836,7 +1912,7 @@ function Canvas() {
                 ))}
                 {(
                     <svg className="rc-terr" width={2040} height={620} viewBox="730 530 2040 620" style={{ left: 730, top: 530 }}>
-                        <Territory tiles={TERR_TILES} zq={zq} edges={TERR_EDGES} trails={TERR_TRAILS} trail={trail} tags={TERR_TAGS} edgeMode={edgeMode} edgeFile={edgeFile} />
+                        <Territory tiles={TERR_TILES} zq={zq} edges={TERR_EDGES} trails={TERR_TRAILS} trail={trail} tags={TERR_TAGS} edgeMode={edgeMode} edgeFile={edgeFile} focus={jumpFocus} />
                     </svg>
                 )}
                 {/* container-band edges + authored label pills render last so
@@ -1997,7 +2073,7 @@ function Canvas() {
             <span className="rc-c4jump" role="group" aria-label="Camera shortcuts">
                 {([['sys', 'C1', 'C1 system context'], ['grp', 'C2', 'C2 containers'], ['comp', 'C3', 'C3 components'], ['code', 'C4', 'C4 code']] as const).map(([lv, lab, tip]) => (
                     <button key={lv} type="button" title={tip} aria-label={tip}
-                        className={`rc-dockchip${(band === 'sys' ? 'sys' : band === 'grp' ? 'grp' : band === 'comp' || band === 'lo' ? 'comp' : 'code') === lv ? ' rc-dockchip-on' : ''}`}
+                        className={`rc-dockchip${(band === 'sys' ? 'sys' : band === 'grp' ? 'grp' : band === 'comp' ? 'comp' : 'code') === lv ? ' rc-dockchip-on' : ''}`}
                         onClick={() => { viewTouched.current = true; bandView(lv); }}>{lab}</button>
                 ))}
             </span>

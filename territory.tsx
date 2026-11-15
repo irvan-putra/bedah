@@ -11,7 +11,10 @@ export type Rect = { x: number; y: number; w: number; h: number };
 type Pt = [number, number];
 
 // frame-local inner origin and size: below the 78px label strip + 28 pad
-const IN_X = 28, IN_Y = 106, IN_PAD_B = 28;
+const IN_X = 28, IN_PAD_B = 28;
+// Tile strip inset below the frame top: App.tsx's label-fit measurer uses
+// this as the label reserve at the bands where the cards are hidden.
+export const IN_Y = 106;
 
 // Hand-placed component footprints, frame-local to the inner area. Fixed
 // forever; the frames they live in come from NEST_EST.
@@ -214,7 +217,7 @@ function routeFilePairs(tiles: Record<string, TileGeo>, pairs: { fa: string; fb:
     return out;
 }
 
-export const Territory = React.memo(function Territory({ tiles, zq, edges, trails, trail, tags, edgeMode, edgeFile }: { edgeMode: 'files' | 'file' | 'all' | 'off'; edgeFile: string | null; tiles: Record<string, TileGeo>; zq: number; edges: CompEdge[]; trails: Trail[]; trail: string; tags: ZoneTag[] }) {
+export const Territory = React.memo(function Territory({ tiles, zq, edges, trails, trail, tags, edgeMode, edgeFile, focus }: { edgeMode: 'files' | 'file' | 'all' | 'off'; edgeFile: string | null; focus: { kind: 'room' | 'tile'; id: string } | null; tiles: Record<string, TileGeo>; zq: number; edges: CompEdge[]; trails: Trail[]; trail: string; tags: ZoneTag[] }) {
     const decl = new Map<string, Rect>();
     for (const t of Object.values(tiles)) for (const r of t.rooms) for (const c of r.chips) decl.set(c.d.id, c.r);
     const fileRect = new Map<string, Rect>();
@@ -327,6 +330,37 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                         <rect x={t.rect.x} y={t.rect.y} width={t.rect.w} height={t.rect.h} rx={6} className={`rc-t-tile${cp.shared ? ' rc-t-shared' : ''}`} />
                         {nameShow ? nameLines.map((ln, li) => <text key={li} x={t.head.x} y={t.head.y + nameFs * 0.82 + li * nameFs * 1.15} className="rc-t-name" style={{ fontSize: csFont(11, nameCap) }}>{ln}</text>) : null}
                         {showResp && cp.resp ? <foreignObject x={t.resp.x} y={t.resp.y} width={t.resp.w} height={t.resp.h}><div className="rc-t-resp">{cp.resp}</div></foreignObject> : null}
+                        {/* File rows at the code-overview tier (below the room
+                            geometry's reading zoom): the whole container frame
+                            fits a phone screen here, and the fixed rooms would
+                            render as oversized empty boxes (their size reserves
+                            space for chips one zoom deeper). Compact screen-
+                            constant rows list the real files instead; the rooms
+                            and chips arrive on their own deeper tiers,
+                            geometry untouched. */}
+                        {!showRooms && zq >= 0.42 ? (() => {
+                            const rowFs = Math.min(9 / zq, 22);
+                            const pitch = rowFs * 1.75;
+                            const topY = (showResp && cp.resp ? t.resp.y + t.resp.h + 2 : t.head.y + (nameShow ? nameLines.length * nameFs * 1.15 : nameFs) + 3);
+                            const avail = t.rect.y + t.rect.h - 4 - topY;
+                            const maxRows = Math.max(t.rooms.length ? 1 : 0, Math.floor(avail / pitch));
+                            const rows = t.rooms.slice(0, maxRows);
+                            const more = t.rooms.length - rows.length;
+                            const maxCh = Math.max(6, Math.floor((t.rect.w - 12) / (rowFs * 0.62)));
+                            const rowText = (r: RoomGeo) => {
+                                const base = r.file.split('/').pop()!;
+                                const meta = FILEINFO[r.file]?.lines != null ? ` \u00b7 ${FILEINFO[r.file].lines}` : '';
+                                if ((base + meta).length <= maxCh) return base + meta;
+                                if (base.length <= maxCh) return base;
+                                return base.slice(0, Math.max(4, maxCh - 1)) + '\u2026';
+                            };
+                            return (
+                                <g className="rc-t-frows">
+                                    {rows.map((r, i) => <text key={r.file} x={t.rect.x + 6} y={topY + i * pitch + rowFs * 0.8} className="rc-t-frow" style={{ fontSize: rowFs, fontFamily: MONO }}>{rowText(r)}</text>)}
+                                    {more > 0 ? <text x={t.rect.x + 6} y={topY + rows.length * pitch + rowFs * 0.8} className="rc-t-frow rc-t-frow-more" style={{ fontSize: rowFs, fontFamily: MONO }}>{`+${more} more`}</text> : null}
+                                </g>
+                            );
+                        })() : null}
                         {showRooms ? t.rooms.map((r) => (
                             <g key={r.file}>
                                 <rect x={r.rect.x} y={r.rect.y} width={r.rect.w} height={r.rect.h} rx={2} className="rc-t-room" />
@@ -365,6 +399,14 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 </g>
             )) : null}
             {zq >= 0.42 ? tags.map((g) => <text key={g.text} x={g.x} y={g.y} textAnchor={g.anchor} className="rc-zone" style={{ fontSize: csFont(7, 7.5) }}>{g.text}</text>) : null}
+            {/* Jump target ring: outlines the room or tile the Jump sheet
+                just focused, at every tier, until the next navigation. */}
+            {focus ? (() => {
+                const t = focus.kind === 'tile' ? tiles[focus.id] : Object.values(tiles).find((tt) => tt.rooms.some((r) => r.file === focus.id));
+                if (!t) return null;
+                const fr = focus.kind === 'tile' ? t.rect : t.rooms.find((r) => r.file === focus.id)!.rect;
+                return <rect x={fr.x - 5} y={fr.y - 5} width={fr.w + 10} height={fr.h + 10} rx={8} className="rc-t-focus" style={{ strokeWidth: Math.min(3 / zq, 9) }} />;
+            })() : null}
         </g>
     );
 });
