@@ -58,6 +58,10 @@ function packChips(decls: CMDecl[], w: number, fs: number): { rects: Rect[]; h: 
 }
 
 const CAP_FS = 3.4;
+// Vertical gap between stacked rooms. 6 world gives each room's header
+// strip breathing room and leaves space for the jump focus ring to sit
+// between rooms without touching either header.
+const ROOM_GAP = 6;
 export function layoutTerritory(frames: Record<string, Rect>): Record<string, TileGeo> {
     const out: Record<string, TileGeo> = {};
     for (const cp of COMPONENTS) {
@@ -80,14 +84,14 @@ export function layoutTerritory(frames: Record<string, Rect>): Record<string, Ti
                 const h = 7 + (ds.length ? pk.h + 2 : 6) + 2;
                 return { file, h, rects: pk.rects, note, cw: area.w - 4 };
             });
-            const tot = rooms.reduce((a, r) => a + r.h, 0) + (rooms.length - 1) * 2;
+            const tot = rooms.reduce((a, r) => a + r.h, 0) + (rooms.length - 1) * ROOM_GAP;
             chosen = { fs, rooms };
             if (tot <= area.h) break;
         }
         let y = area.y;
         const rooms: RoomGeo[] = chosen!.rooms.map((r) => {
             const rect: Rect = { x: area.x, y, w: area.w, h: r.h };
-            y += r.h + 2;
+            y += r.h + ROOM_GAP;
             const ds = DECLS_BY_FILE[r.file] ?? [];
             return {
                 file: r.file, rect, fs: chosen!.fs, note: r.note, section: SECTION_OF[r.file] ?? '',
@@ -405,7 +409,24 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 const t = focus.kind === 'tile' ? tiles[focus.id] : Object.values(tiles).find((tt) => tt.rooms.some((r) => r.file === focus.id));
                 if (!t) return null;
                 const fr = focus.kind === 'tile' ? t.rect : t.rooms.find((r) => r.file === focus.id)!.rect;
-                return <rect x={fr.x - 5} y={fr.y - 5} width={fr.w + 10} height={fr.h + 10} rx={8} className="rc-t-focus" style={{ strokeWidth: Math.min(3 / zq, 9) }} />;
+                // Centre the ring in the gap between the focused room and
+                // its neighbours: the fixed 5-world pad crossed the next
+                // room's header text where rooms stack tightly. The pad is
+                // clamped so the outer stroke edge stays mid-gap, and the
+                // stroke is thinned if needed so its inner edge never dips
+                // into the focused room's own header band. Wide gaps keep
+                // the original 5-world look.
+                let gap = Infinity;
+                const sibs = focus.kind === 'tile' ? Object.values(tiles).map((tt) => tt.rect) : t.rooms.map((r) => r.rect);
+                for (const sr of sibs) {
+                    if (sr === fr) continue;
+                    const g = Math.max(sr.x - (fr.x + fr.w), fr.x - (sr.x + sr.w), sr.y - (fr.y + fr.h), fr.y - (sr.y + sr.h));
+                    if (g >= 0) gap = Math.min(gap, g);
+                }
+                const sw0 = Math.min(3 / zq, 9);
+                const pad = Math.min(5, Math.max(0.15, gap / 2 - sw0 / 2));
+                const sw = Math.min(sw0, 2 * Math.max(0.45, Math.min(gap - pad - 0.5, pad + 1.2)));
+                return <rect x={fr.x - pad} y={fr.y - pad} width={fr.w + 2 * pad} height={fr.h + 2 * pad} rx={8} className="rc-t-focus" style={{ strokeWidth: sw }} />;
             })() : null}
         </g>
     );
