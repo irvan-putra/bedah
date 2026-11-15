@@ -86,8 +86,9 @@ const DEFAULT_POS: Record<string, Pos> = {
 // (see sections.ts COMMIT; each relationship names its evidence file).
 // Runnable container: the canvas web app. The generators are hand-run CLIs;
 // build/deploy and repo docs stay one honestly-labeled supporting group,
-// not runtime architecture. Solid lines are observed flows; dashed lines
-// mark one-time history (the intodo extraction), not a live link.
+// not runtime architecture. Solid lines are observed flows; one-time
+// history (the intodo extraction) is documented in the Menu's About /
+// history section, not drawn as a live link on the map.
 //
 // The container and system bands are true semantic zoom: instead of
 // shrinking a fixed world-space diagram, each band re-lays-out against the
@@ -115,7 +116,6 @@ const C4_EXTERNALS: C4Node[] = [
     { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/vana source', kind: 'external', frac: { fx: 0.8, fy: 0.14 } },
     { id: 'x-gha', label: 'GitHub Actions', sub: 'two-job build + deploy on push', kind: 'external', frac: { fx: 0.18, fy: 0.24 } },
     { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/vana', kind: 'external', frac: { fx: 0.8, fy: 0.34 } },
-    { id: 'x-intodo', label: 'intodo', sub: 'origin project (unchanged)', kind: 'external', frac: { fx: 0.5, fy: 0.8 } },
 ];
 // People on the container view: the owner who writes and regenerates the
 // content, and the visitor reviewing the page in their own browser.
@@ -158,8 +158,7 @@ const NEST_FRAME_W = (gid: string) => (NEST_COLS[gid] ?? 2) * NEST_COL_W - NEST_
 // v4 composition (C4 sample proportions): the whole
 // frame complex shifts right so externals can spread around the boundary -
 // people on top, the GitHub repo -> Actions -> Pages pipeline stacked on
-// the right flank, intodo (origin
-// project) on the left flank of the system band. Short edges exit the
+// the right flank. Short edges exit the
 // nearest side instead of crowding the bottom strip.
 const FRAME_DX = 712;
 const NEST_COL_X = [40 + FRAME_DX, 40 + FRAME_DX + NEST_FRAME_W('c-app') + NEST_FRAME_GAP];
@@ -231,7 +230,6 @@ const SYS_NODES: C4Node[] = [
     { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/vana source', kind: 'external', frac: { fx: 0.84, fy: 0.36 } },
     { id: 'x-gha', label: 'GitHub Actions', sub: 'two-job build + deploy on push', kind: 'external', frac: { fx: 0.84, fy: 0.52 } },
     { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/vana', kind: 'external', frac: { fx: 0.84, fy: 0.68 } },
-    { id: 'x-intodo', label: 'intodo', sub: 'origin project (unchanged)', kind: 'external', frac: { fx: 0.18, fy: 0.7 } },
 ];
 const SYS_RELS: C4Rel[] = [
     { a: 'p-owner', b: 's-vana', label: 'writes + reviews' },
@@ -242,9 +240,6 @@ const SYS_RELS: C4Rel[] = [
     { a: 'x-gha', b: 'x-ghrepo', label: 'checks out main source', side: -1 },
     { a: 'x-gha', b: 'x-ghpages', label: 'deploys the built site; verifies live bytes' },
     { a: 'x-ghpages', b: 'p-visitor', label: 'serves the page (HTTPS)' },
-    // The canvas was extracted from intodo once; the original review page
-    // keeps serving from intodo, unchanged. Dashed: history, not a live link.
-    { a: 'x-intodo', b: 's-vana', label: 'one-time extraction; original page unchanged', dashed: true, plain: true },
 ];
 // key lookup: short edge labels stay nameless on the map, so the docked key
 // names each relation's endpoints explicitly (container + system ids)
@@ -1533,7 +1528,7 @@ function Canvas() {
     // Node slots are fractions of the spread rect, so the composition keeps
     // its shape at every viewport size (C4 system-context proportions:
     // people along the top, the GitHub repo/Actions/Pages pipeline stacked
-    // on the right flank, intodo mid-left). The slot reserves half the MAXIMUM content stack a node can
+    // on the right flank). The slot reserves half the MAXIMUM content stack a node can
     // show at this band (name + sub + kind tag, wrapped): at phone fit the
     // rendered box fills the slot, so slots can never overlap at any
     // reachable zoom; at closer zooms the same box is a smaller share of the
@@ -1569,7 +1564,6 @@ function Canvas() {
         // page (HTTPS)" pill on the lane into its right edge nearly touched
         // the box on a phone.
         nodeP('p-owner', 0.31, 0.03), nodeP('p-visitor', 0.63, 0.03),
-        nodeX('x-intodo', 0.06, 0.52),
         nodeX('x-ghrepo', 0.99, 0.27), nodeX('x-gha', 0.99, 0.565), nodeX('x-ghpages', 0.99, 0.86),
     ];
     // Container band edges: the frame-level relationships plus the people
@@ -1634,7 +1628,6 @@ function Canvas() {
         'x-gha-x-ghpages': { pts: [[3005, 1945], [3005, 2560]], pill: [2220, 2320], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205, lead: 3005 },
         // pages -> visitor: dedicated lane around the right and top edges
         'x-ghpages-p-visitor': { pts: [[3400, 2723], [3450, 2723], [3450, 180], [2280, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
-        'x-intodo-s-vana': { pts: [[508, 1662], [700, 1662], [700, 900], [840, 900]], pill: [1080, 1662], lines: ['one-time', 'extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
     };
     const authSysGeoms = (snap: boolean): RelGeom[] => SYS_RELS.map((rel) => {
         const a = AUTH_SYS[`${rel.a}-${rel.b}`];
@@ -1976,14 +1969,13 @@ function Canvas() {
             canvas; the key and the menu open as docked panels above the
             bar, shrinking the viewport instead of overlaying the diagram.
             Structure edges carry short text labels on the map; the key lists
-            each full relation with its endpoints; dashed = designed
-            but not active (manual run) or no deployed runtime link */}
+            each full relation with its endpoints. */}
         {dock === 'legend' && dockRels ? (
             <div className="rc-legend">
                 {dockRels.map((r, i) => (
                     <span className="rc-legend-item" key={r.label}>{<span className="rc-legend-endpoints">{`${REL_NODE_LABEL(r.a)} \u2192 ${REL_NODE_LABEL(r.b)}: `}</span>}{r.label}</span>
                 ))}
-                <span className="rc-legend-item rc-legend-key"><span className="rc-legend-line"></span>observed flow or manual step (repo-evidenced) · <span className="rc-legend-line rc-legend-dash"></span>{band === 'grp' ? 'no runtime link / manual run, not automatic' : 'manual run, not automatic (workflow_dispatch in repo)'}</span>
+                <span className="rc-legend-item rc-legend-key"><span className="rc-legend-line"></span>observed flow or manual step (repo-evidenced)</span>
                 <span className="rc-legend-item rc-legend-key rc-legend-shapes">Shapes: <span className="rc-kindchip rc-kindchip-person">{C4_PERSON_ICON}person</span> <span className="rc-kindchip rc-kindchip-system">software system</span> <span className="rc-kindchip rc-kindchip-container">container</span> <span className="rc-kindchip rc-kindchip-external">external system</span> <span className="rc-kindchip rc-kindchip-support">supporting</span></span>
 
             </div>
@@ -2042,6 +2034,11 @@ function Canvas() {
                     <p>Inventory: {CM_FILES.length} files listed from git (tracked plus untracked, not ignored). Unassigned to a component: {CM_FILES.filter((f) => !f.comp).map((f) => f.path).join(', ') || 'none'}. Binary or media files: {CM_FILES.filter((f) => f.lang === 'asset').map((f) => `${f.path} (${f.size} bytes, contents not analyzed)`).join(', ') || 'none present'}.</p>
                     <p>Comments: leading comments, JSDoc and docstrings are attached to the declaration they sit above ({CM_DECLS.filter((d) => d.doc).length} declarations). They are the author's words, shown with their source line, and never create a relation. Markdown mentions of a file or declaration in backticks are listed as text mentions ({CM_DOCREFS.length}); they are not code relations and nothing here says the prose is true.</p>
                     <p>None of these is a proven runtime call. Generated files (code.ts, codemap.ts) are not broken down.</p>
+                </div>
+                <span className="rc-menu-head">About / history</span>
+                <div className="rc-menu-detail">
+                    <p>This canvas was extracted once from the intodo review canvas on Nov 14, 2026 - extraction commit <a href="https://github.com/irvan-putra/vana/commit/a40a5e6c7891c6fe43b4a80d95a4e2a3a0d802f7" target="_blank" rel="noreferrer">a40a5e6</a>, with the copied content pinned at intodo fbd0213 (sections) and 1f6ba2f (component/code layers). The extraction was a copy, not a move: the original page kept serving, unaltered by it, at <a href="https://vanipy.com/intodo/review/" target="_blank" rel="noreferrer">vanipy.com/intodo/review</a>, and the original's source had no later commits as of Nov 15, 2026.</p>
+                    <p>That relationship used to be drawn as a dashed edge on the system map. It is one-time history, not a live link - nothing on this page fetches from intodo - so it is documented here while the map shows only the current system.</p>
                 </div>
 
                     <>

@@ -19,8 +19,9 @@ Live at <https://vanipy.com/vana/>.
   fixed in place; review marks and camera position stay in the visitor's
   browser only (localStorage), nothing is sent anywhere.
 - Relationship lines labeled as references come from a static name/import
-  scan at the pinned commit, not proven runtime calls; dashed lines mark
-  one-time history (the intodo extraction), not a live link.
+  scan at the pinned commit, not proven runtime calls. One-time history
+  (the intodo extraction) is documented in the page's Menu under
+  "About / history", not drawn on the map.
 
 ## Content and honesty
 
