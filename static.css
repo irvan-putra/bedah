@@ -58,7 +58,7 @@ h1, h2, h3 { font-family: Aime, Georgia, serif; font-weight: 400; }
     position: relative;
     /* the canvas owns every touch gesture on its surface: without this the
        phone browser hijacks drags for its own scroll/zoom, cancels the
-       pointer stream, and the canvas appears stuck (actual Samsung report).
+       pointer stream, and the canvas can appear stuck on touch devices.
        Scoped to the viewport so the sheet overlay and dock panels keep
        normal touch scrolling. */
     touch-action: none;
@@ -431,8 +431,7 @@ a, .rc-card a { color: var(--ds-ink); }
    - Container band, z<0.16: node sub-labels and kind tags (the renderer
      also swaps label pills for edge-only lines there).
    - System band, z<0.12: sub-labels and the boundary kind chip. The system
-     NAME stays: an unnamed boundary made the whole view unreadable
-     (owner screenshot, 15 Nov). */
+     NAME stays: an unnamed boundary made the whole view unreadable. */
 .rc-grp.rc-far .rc-grpcount, .rc-grp.rc-far .rc-kindtag,
 .rc-grp.rc-far .rc-personicon,
 .rc-grp.rc-far .rc-frame-sub, .rc-grp.rc-far .rc-frame-kind { display: none; }
@@ -667,7 +666,7 @@ a, .rc-card a { color: var(--ds-ink); }
    strip, clear of the frames. */
 .rc-sys .rc-grpnode .rc-grplabel { font-size: max(34px, min(calc(14px / var(--camz)), 150px)); }
 /* The system name carries the boundary: bigger than people/external labels
-   (C4 System Context style; owner found it tiny on an otherwise blank box). */
+   (C4 System Context style; the system name needs stronger contrast and size). */
 .rc-sys .rc-node-boundary .rc-grplabel { background: transparent; padding: 0; font-size: max(40px, min(calc(18px / var(--camz)), 190px)); }
 .rc-sys .rc-node-boundary .rc-grpcount { display: block; font-size: 34px; }
 .rc-sys .rc-node-boundary .rc-kindtag { display: inline-block; font-size: 30px; }

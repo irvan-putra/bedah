@@ -220,6 +220,12 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
     const fileRect = new Map<string, Rect>();
     for (const t of Object.values(tiles)) for (const r of t.rooms) fileRect.set('file:' + r.file, r.rect);
     const showResp = zq >= 0.8, showRooms = zq >= 1.4, showChipText = zq >= 3.0, showEdges = zq >= 2.2;
+    // Declaration chips declutter Maps-style. The C4 entry zoom shows the
+    // file rooms with names and line counts; the declaration chips inside
+    // them arrive one zoom step deeper, together with the edges between
+    // them, so the landing reads as named files rather than a wall of
+    // symbols too small to tell apart.
+    const showChips = zq >= 2.2;
     const cx = (r: Rect) => r.x + r.w / 2, cy = (r: Rect) => r.y + r.h / 2;
     const edgeLines: React.ReactNode[] = [];
     const fileOf = (id: string) => id.replace(/^file:/, '').split('#')[0];
@@ -297,7 +303,7 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                 const t = tiles[cp.id];
                 const fitCap = (t.head.w * 0.96) / (cp.name.length * 0.62);
                 // Long names wrap to two balanced lines inside the tile instead
-                // of shrinking below readability (owner feedback, 15 Nov); only
+                // of shrinking below readability; only
                 // while rooms are hidden, so the second line has free space.
                 const words = cp.name.split(' ');
                 let nameLines = [cp.name], nameCap = Math.min(28, fitCap);
@@ -310,23 +316,36 @@ export const Territory = React.memo(function Territory({ tiles, zq, edges, trail
                     nameLines = [words.slice(0, bi).join(' '), words.slice(bi).join(' ')];
                     nameCap = Math.min(28, (t.head.w * 0.96) / (bm * 0.62));
                 }
-                const nameShow = zq * Math.min(nameCap, 11 / zq) >= 6.2;
+                // The rendered font is min(11px/zoom, nameCap): anchor the
+                // baseline to that EFFECTIVE size. Anchoring to nameCap alone
+                // dropped the name onto the responsibility line whenever the
+                // screen-constant size was the smaller of the two.
+                const nameFs = Math.min(nameCap, 11 / zq);
+                const nameShow = zq * nameFs >= 6.2;
                 return (
                     <g key={cp.id} data-comp={cp.id}>
                         <rect x={t.rect.x} y={t.rect.y} width={t.rect.w} height={t.rect.h} rx={6} className={`rc-t-tile${cp.shared ? ' rc-t-shared' : ''}`} />
-                        {nameShow ? nameLines.map((ln, li) => <text key={li} x={t.head.x} y={t.head.y + nameCap * 0.82 + li * nameCap * 1.15} className="rc-t-name" style={{ fontSize: csFont(11, nameCap) }}>{ln}</text>) : null}
+                        {nameShow ? nameLines.map((ln, li) => <text key={li} x={t.head.x} y={t.head.y + nameFs * 0.82 + li * nameFs * 1.15} className="rc-t-name" style={{ fontSize: csFont(11, nameCap) }}>{ln}</text>) : null}
                         {showResp && cp.resp ? <foreignObject x={t.resp.x} y={t.resp.y} width={t.resp.w} height={t.resp.h}><div className="rc-t-resp">{cp.resp}</div></foreignObject> : null}
                         {showRooms ? t.rooms.map((r) => (
                             <g key={r.file}>
                                 <rect x={r.rect.x} y={r.rect.y} width={r.rect.w} height={r.rect.h} rx={2} className="rc-t-room" />
                                 <text x={r.cap.x} y={r.cap.y + 4.4} className="rc-t-cap" style={{ fontSize: CAP_FS }}>{r.file.split('/').pop()}<tspan className="rc-t-capmeta">{`${FILEINFO[r.file]?.lines != null ? ` · ${FILEINFO[r.file].lines} lines` : ' · size not shown'}${r.section ? ` · review: ${r.section}` : ''}`}</tspan></text>
                                 {r.note ? <text x={r.rect.x + 3} y={r.rect.y + r.rect.h - 2.6} className="rc-t-note" style={{ fontSize: 3 }}>{r.note}</text> : null}
-                                {r.chips.map((c) => (
+                                {/* while the room's chips are decluttered away, say what is
+                                    inside instead of showing a blank box */}
+                                {r.chips.length > 0 && !(showChips && zq * r.fs >= 5.2) ? (
+                                    <text x={r.rect.x + r.rect.w / 2} y={r.rect.y + r.rect.h / 2} textAnchor="middle" className="rc-t-note" style={{ fontSize: 7 }}>{r.chips.length} {r.chips.length === 1 ? 'declaration' : 'declarations'} - zoom in</text>
+                                ) : null}
+                                {/* a chip renders only when its name can render with it:
+                                    anonymous colored rects were the "wall of symbols"; a
+                                    declaration without its readable name is clutter, not info */}
+                                {showChips && zq * r.fs >= 5.2 ? r.chips.map((c) => (
                                     <g key={c.d.id} className={`rc-cm-chip rc-cm-${KIND_CLASS[c.d.kind] ?? 'cn'}`}>
                                         <rect x={c.r.x} y={c.r.y} width={c.r.w} height={c.r.h} rx={c.r.h * 0.25} />
-                                        {zq * r.fs >= 5.2 ? <text x={c.r.x + c.r.h * 0.4} y={c.r.y + c.r.h * 0.7} style={{ fontSize: r.fs, fontFamily: MONO }}>{c.d.name}</text> : null}
+                                        <text x={c.r.x + c.r.h * 0.4} y={c.r.y + c.r.h * 0.7} style={{ fontSize: r.fs, fontFamily: MONO }}>{c.d.name}</text>
                                     </g>
-                                ))}
+                                )) : null}
                             </g>
                         )) : null}
                     </g>

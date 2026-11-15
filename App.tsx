@@ -104,7 +104,7 @@ const C4_CONTAINERS: C4Node[] = [
 // One external per REAL target: the source repo, the Actions runner and
 // the Pages host are three different systems that happen to share a
 // platform. A single "GitHub" box lumped them together and left every
-// arrow ambiguous (owner screenshot, 15 Nov); each edge now names the
+// arrow ambiguous; each edge now names the
 // target it actually talks to, with deploy.yml as the evidence.
 const C4_EXTERNALS: C4Node[] = [
     { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/vana source', kind: 'external', frac: { fx: 0.8, fy: 0.14 } },
@@ -198,6 +198,14 @@ const TERR_TILES = layoutTerritory(TERR_FRAMES);
 const TERR_EDGES = routeCompEdges(TERR_TILES, TERR_FRAMES);
 const TERR_TRAILS = routeTrails(TERR_TILES, TERR_FRAMES);
 const TERR_TAGS = zoneTags(TERR_FRAMES);
+// Every code file room on the map, in component order: the Jump sheet's
+// Code group.
+const FILE_LINES: Record<string, number | undefined> = Object.fromEntries(CM_FILES.map((f) => [f.path, (f as { lines?: number }).lines]));
+const CODE_ROOMS: { file: string; comp: string }[] = [];
+for (const cp of COMPONENTS) {
+    const t = TERR_TILES[cp.id];
+    if (t) for (const r of t.rooms) CODE_ROOMS.push({ file: r.file, comp: cp.id });
+}
 type C4Rel = { a: string; b: string; label: string; dashed?: boolean; side?: 1 | -1; plain?: boolean };
 const C4_RELS: C4Rel[] = [
     { a: 'c-gen', b: 'c-app', label: 'generates review content' },                        // tools/gen_sections.py, tools/gen_code.py (--out src/)
@@ -717,6 +725,7 @@ function Canvas() {
     const [pos, setPos] = useState<Record<string, Pos>>(sanePositions(saved?.pos ?? {}));
     const [focusedId, setFocusedId] = useState<string | null>(null);
     const [sheetGroup, setSheetGroup] = useState<string | null>(null);
+    const [jumpOpen, setJumpOpen] = useState(false);
     const [dock, setDock] = useState<'none' | 'menu' | 'legend'>('none');
     // one canvas: the old whole-canvas view switches are gone
     const [trail, setTrail] = useState<'none' | 'ship' | 'refresh'>('none');
@@ -897,16 +906,58 @@ function Canvas() {
         }
         return { z: c.z, cx: c.x, cy: c.y, h, fh };
     }
+    // Fit map re-frames the level the camera is on. A whole-map union fit
+    // always lands at the container band, which made Fit useless from the
+    // other levels. Fit now frames the current zoom band's own content:
+    // C1 the system-context diagram, C2 the whole-map union (unchanged),
+    // C3 the component level landing, C4 the container territory under the
+    // camera at the code-entry zoom. Entity framing belongs to the Jump
+    // sheet and map taps, not to Fit.
     function fitView() {
+        const el = vpRef.current;
+        const w = el ? el.clientWidth : vp.w, h = el ? el.clientHeight : vp.h;
+        if (!w || !h) return;
         const f = mapUnionFit();
         if (!f) return;
-        const c: Cam = { x: f.cx, y: f.cy + (f.h - f.fh) / (2 * f.z), z: f.z };
+        const fh = f.fh;
+        let c: Cam;
+        if (band === 'sys') {
+            const b = contentBounds('sys');
+            if (!b) return;
+            // stay inside the system band so the C1 rendering stays on
+            const z = clampZ(Math.min(Math.min(w / (b.x1 - b.x0 + 80), fh / (b.y1 - b.y0 + 80)) * 0.98, SYS_Z * 0.94));
+            c = { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 + (h - fh) / (2 * z), z };
+        } else if (band === 'comp' || band === 'lo') {
+            // Re-frame the component level itself (same landing as the C3
+            // shortcut): fitting every container frame would zoom a phone
+            // out of this band entirely.
+            const frames = groupLayout.filter((n) => n.g.kind === 'container' || n.g.kind === 'support');
+            const app = frames.find((n) => n.g.id === 'c-app') ?? frames[0];
+            if (!app) return;
+            const z = COMP_Z * 0.93;
+            c = { x: app.x, y: app.y + (h - fh) / (2 * z), z };
+        } else if (band === 'detail') {
+            // The container territory under the camera (nearest frame center)
+            // at the C4 entry zoom: re-frame the code map you are reading,
+            // never an escape back to the container band.
+            let bx = 0, by = 0, bd = Infinity, found = false;
+            for (const fr of Object.values(NEST_EST.frames)) {
+                const cx = fr.x + fr.w / 2, cy = fr.y + fr.h / 2;
+                const d = Math.hypot(cx - cam.x, cy - cam.y);
+                if (d < bd) { bd = d; bx = cx; by = cy; found = true; }
+            }
+            if (!found) return;
+            const z = 1.4;
+            c = { x: bx, y: by + (h - fh) / (2 * z), z };
+        } else {
+            c = { x: f.cx, y: f.cy + (f.h - fh) / (2 * f.z), z: f.z };
+        }
         // no-op guard: resize feedback (iframe height ping-pong) must not
         // turn into a setState/persist storm
         if (Math.abs(cam.x - c.x) < 0.5 && Math.abs(cam.y - c.y) < 0.5 && Math.abs(cam.z - c.z) < 0.001) return;
         setCam(c); persist(c, pos, reviews);
     }
-    // C1-C4 camera shortcuts (dock, requested by the owner 15 Nov): pure
+    // C1-C4 camera shortcuts (dock): pure
     // camera jumps on the SAME fixed territory - nothing re-lays, nothing
     // hides, and Fit map keeps its geometric meaning. C1/C2 fit the whole
     // union then clamp into the requested band; C3 centers the container
@@ -938,7 +989,7 @@ function Canvas() {
         if (level === 'comp') {
             // Frame the container interiors (the component territory): named
             // boxes with their interiors give a recognizable landing, not
-            // cropped anonymous lane interiors (owner feedback, 15 Nov).
+            // cropped anonymous lane interiors.
             const frames = groupLayout.filter((n) => n.g.kind === 'container' || n.g.kind === 'support');
             let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
             frames.forEach((n) => {
@@ -946,7 +997,7 @@ function Canvas() {
                 x1 = Math.max(x1, n.x + n.hw + 30); y1 = Math.max(y1, n.y + n.hh + 30);
             });
             // Deepest component-band zoom: component tile names must be
-            // readable at the shortcut landing (owner feedback, 15 Nov), and
+            // readable at the shortcut landing, and
             // the widest screen still fits every container at this zoom.
             const z = COMP_Z * 0.93;
             // On narrow screens anchor on the main container (fully visible);
@@ -956,7 +1007,7 @@ function Canvas() {
         } else if (level === 'code') {
             // Land on the app territory's top-left: the frame label strip and
             // the first file lanes give a recognizable entry, not chopped
-            // anonymous lane interiors (owner feedback, 15 Nov).
+            // anonymous lane interiors.
             const z = 1.4;
             c = { x: 900, y: 680 + (h - fh) / (2 * z), z };
         } else {
@@ -1002,9 +1053,70 @@ function Canvas() {
     const focusTile = (cid: string) => {
         viewTouched.current = true;
         const r = TERR_TILES[cid].rect;
-        const z = clampZ(Math.min((evp.w - 20) / r.w, (evp.h * 0.7) / r.h, 6));
-        const c = clampCam({ x: r.x + r.w / 2, y: r.y + r.h / 2, z });
+        // floor 2.3 as in focusRoom: a tile tap keeps arriving at named
+        // declaration chips, not rooms emptied by the declutter tier
+        const z = clampZ(Math.min(Math.max(Math.min((evp.w - 20) / r.w, (evp.h * 0.7) / r.h), 2.3), 6));
+        // A tile taller than the viewport at this zoom top-aligns instead of
+        // centering, so its label is never cropped off the top edge; wider
+        // than the viewport it left-aligns, so the tile name and the first
+        // chips stay visible (the rest is a pan away).
+        const cy = r.h * z > evp.h * 0.85 ? r.y + (evp.h * 0.42) / z : r.y + r.h / 2;
+        const cx = r.w * z > evp.w * 0.9 ? r.x + (evp.w * 0.46) / z : r.x + r.w / 2;
+        const c = clampCam({ x: cx, y: cy, z });
         setCam(c); persist(c, pos, reviews);
+    };
+
+    // Jump sheet focus for a system-context concept (person, external
+    // system, or the vana boundary itself). Stays inside the system band so
+    // the C1 rendering stays on; the whole diagram fits phone width at this
+    // zoom anyway, so this is a re-centering, not a zoom-in.
+    const focusSysNode = (id: string) => {
+        viewTouched.current = true;
+        if (id === 's-vana') { bandView('sys'); return; }
+        const n = sysLayout.find((x) => x.g.id === id);
+        if (!n) return;
+        const el = vpRef.current;
+        const h = el ? el.clientHeight : vp.h;
+        const f = mapUnionFit();
+        const fh = f ? f.fh : Math.max(120, h - 64);
+        // Measure the live node box when it is rendered (system band); the
+        // slot estimate is the fallback from other bands.
+        const elN = vpRef.current?.querySelector(`[data-nid="${id}"]`) as HTMLElement | null;
+        const world = vpRef.current?.querySelector('.rc-world') as HTMLElement | null;
+        // n.x/n.y is the node box's center (the rendered div is
+        // center-anchored on it; verified against live measurements)
+        let ctr = { x: n.x, y: n.y };
+        if (elN && world && elN.getBoundingClientRect().width > 0) {
+            const wr = world.getBoundingClientRect();
+            const cr = elN.getBoundingClientRect();
+            ctr = { x: (cr.left - wr.left) / cam.z + cr.width / cam.z / 2, y: (cr.top - wr.top) / cam.z + cr.height / cam.z / 2 };
+        }
+        const z = SYS_Z * 0.94;
+        const c = { x: ctr.x, y: ctr.y + (h - fh) / (2 * z), z };
+        setCam(c); persist(c, pos, reviews);
+    };
+
+    // Jump sheet focus for one code file room: lands in the detail band
+    // with the room's declaration chips readable.
+    const focusRoom = (file: string) => {
+        viewTouched.current = true;
+        for (const t of Object.values(TERR_TILES)) {
+            const r = t.rooms.find((rm) => rm.file === file);
+            if (!r) continue;
+            // floor 2.3: land where this room's declaration chips render
+            // (they declutter below zq 2.2) - jumping to a code file must
+            // arrive at its code, not an empty room.
+            const z = clampZ(Math.min(Math.max(Math.min((evp.w - 20) / r.rect.w, (evp.h * 0.7) / r.rect.h), 2.3), 6));
+            // A room taller than the viewport at this zoom top-aligns instead
+            // of centering, so the file caption stays on screen; wider than
+            // the viewport it left-aligns, so the filename and the first
+            // chips stay visible (the rest is a pan away).
+            const cy = r.rect.h * z > evp.h * 0.85 ? r.rect.y + (evp.h * 0.42) / z : r.rect.y + r.rect.h / 2;
+            const cx = r.rect.w * z > evp.w * 0.9 ? r.rect.x + (evp.w * 0.46) / z : r.rect.x + r.rect.w / 2;
+            const c = clampCam({ x: cx, y: cy, z });
+            setCam(c); persist(c, pos, reviews);
+            return;
+        }
     };
 
     const focusGroup = (gid: string) => {
@@ -1392,8 +1504,8 @@ function Canvas() {
     // visibility only, never territory).
     const groupLayout: GroupNode[] = [
         ...frameNodes,
-        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.66, 0.045),
-        nodeX('x-ghrepo', 0.94, 0.36), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.68),
+        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.63, 0.045),
+        nodeX('x-ghrepo', 0.94, 0.345), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.705),
     ];
     // System band (c4model.com sample as reference):
     // ONE fixed system footprint per spread - the boundary rect below is the
@@ -1401,15 +1513,18 @@ function Canvas() {
     // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
         { g: SYS_NODES.find((x) => x.id === 's-vana')!, ...SYS_BOX },
-        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.66, 0.045),
+        // Visitor sits a slot left of its first placement: the "serves the
+        // page (HTTPS)" pill on the lane into its right edge nearly touched
+        // the box on a phone.
+        nodeP('p-owner', 0.31, 0.045), nodeP('p-visitor', 0.63, 0.045),
         nodeX('x-intodo', 0.06, 0.52),
-        nodeX('x-ghrepo', 0.94, 0.36), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.68),
+        nodeX('x-ghrepo', 0.94, 0.345), nodeX('x-gha', 0.94, 0.52), nodeX('x-ghpages', 0.94, 0.705),
     ];
     // Container band edges: the frame-level relationships plus the people
     // edges from the system level. The GitHub pipeline (repo -> Actions ->
     // Pages) renders here too, on authored lanes with world-sized pills:
     // hiding it left GitHub Actions stranded with no arrows at this band
-    // (owner screenshot, 15 Nov). Pills hide at the far tier (edge lines
+    // when the pipeline was hidden at this band. Pills hide at the far tier (edge lines
     // stay); the docked key always lists every relation.
     const GRP_EXTRA_RELS = SYS_RELS.filter((r) =>
         (r.a === 'p-owner' && r.b === 's-vana') || (r.a === 'p-visitor' && r.b === 's-vana'));
@@ -1420,8 +1535,8 @@ function Canvas() {
     // ever suppressed or re-placed by collision heuristics at this band.
     const AUTH_GRP: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
         'c-gen-c-app': { pts: [[1930, 671], [1570, 671]], pill: [1750, 610], lines: ['generates', 'review content'], hw: 152 },
-        // GitHub pipeline ports (centers: repo y 1162, Actions y 1662,
-        // Pages y 2162, all x 2973): every lane ends on ITS OWN node's
+        // GitHub pipeline ports (centers: repo y 1115, Actions y 1662,
+        // Pages y 2240, all x 2973): every lane ends on ITS OWN node's
         // border. Endpoint snap only adjusts along the final segment axis,
         // so each authored lane must sit on the target's territory at every zoom.
         'c-app-x-ghrepo': { pts: [[1570, 1000], [1900, 1000], [1900, 1210], [2930, 1210]], pill: [2400, 1290], lines: ['source links at', 'pinned commit'], hw: 170 },
@@ -1434,34 +1549,34 @@ function Canvas() {
         'x-ghrepo-x-gha': { pts: [[2945, 1245], [2945, 1580]], pill: [2945, 1380], lines: ['push to main', 'triggers'], hw: 130 },
         'x-gha-x-ghrepo': { pts: [[3035, 1580], [3100, 1580], [3100, 1245], [3035, 1245]], pill: [3100, 1500], lines: ['checks out', 'main source'], hw: 130 },
         'x-gha-x-ghpages': { pts: [[2945, 1745], [2945, 2080]], pill: [2945, 1910], lines: ['deploys the built', 'site + verifies'], hw: 180 },
-        'p-visitor-c-app': { pts: [[1818, 250], [1500, 250], [1500, 560]], pill: [1640, 250], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
+        'p-visitor-c-app': { pts: [[1818, 250], [1500, 250], [1500, 560]], pill: [1560, 250], lines: ['reads + marks', '(localStorage only)'], hw: 150 },
         // People edges ride the gutter opened above the system boundary
         // (people row raised to fy 0.07): each pill sits on its own
         // connector, world-sized like the other authored pills, so it reads
         // at reading zoom and declutters Maps-style at the far band.
         'p-owner-s-vana': { pts: [[1007, 320], [1007, 508]], pill: [1007, 410], lines: ['writes +', 'reviews'], hw: 130 },
-        'p-visitor-s-vana': { pts: [[2099, 320], [2099, 508]], pill: [2099, 410], lines: ['reads + marks', '(local only)'], hw: 190 },
+        'p-visitor-s-vana': { pts: [[2006, 320], [2006, 508]], pill: [2006, 410], lines: ['reads + marks', '(local only)'], hw: 190 },
     };
     // System band: SAME relationships, authored for the C4 System Context
-    // poster (owner screenshot, 15 Nov: unlabeled crossing hairlines at the
-    // repo/Actions cluster). Auto-routing dropped 7 of 9 labels to collision
+    // poster: unlabeled crossing hairlines at the repo/Actions cluster read
+    // as noise at the system band. Auto-routing dropped 7 of 9 labels to collision
     // heuristics, so every route + pill here is explicit, world-sized, and
     // never suppressed. Pills reuse the container band's short wording; the
     // docked key keeps the full relation text. Node geometry untouched.
     const AUTH_SYS: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number }> = {
-        'p-owner-s-vana': { pts: [[1007, 340], [1007, 508]], pill: [1007, 410], lines: ['writes + reviews'], hw: 510, hh: 70 },
-        'p-visitor-s-vana': { pts: [[2099, 340], [2099, 508]], pill: [2099, 410], lines: ['reads + marks'], hw: 420, hh: 70 },
+        'p-owner-s-vana': { pts: [[1007, 340], [1007, 508]], pill: [1007, 418], lines: ['writes + reviews'], hw: 510, hh: 78 },
+        'p-visitor-s-vana': { pts: [[2006, 340], [2006, 508]], pill: [2006, 418], lines: ['reads + marks'], hw: 420, hh: 78 },
         // boundary right edge -> repo top-left; pill above the corner, clear of the repo box
-        's-vana-x-ghrepo': { pts: [[2804, 900], [2900, 900], [2900, 1050]], pill: [2560, 800], lines: ['source links at', 'pinned commit'], hw: 480, hh: 140 },
+        's-vana-x-ghrepo': { pts: [[2804, 900], [2900, 900], [2900, 1050]], pill: [2250, 810], lines: ['source links at', 'pinned commit'], hw: 420, hh: 140 },
         // owner -> repo: over the top of the boundary, down the right side, into the repo top
-        'p-owner-x-ghrepo': { pts: [[1288, 240], [1540, 240], [1540, 540], [3150, 540], [3150, 1050]], pill: [2500, 575], lines: ['pushes source'], hw: 420, hh: 65 },
+        'p-owner-x-ghrepo': { pts: [[1288, 240], [1540, 240], [1540, 540], [3150, 540], [3150, 1050]], pill: [2390, 575], lines: ['pushes source'], hw: 360, hh: 65 },
         // pipeline lanes between the boxes, pills in the open column left of the flank
-        'x-ghrepo-x-gha': { pts: [[3050, 1245], [3050, 1580]], pill: [2290, 1310], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205 },
-        'x-gha-x-ghrepo': { pts: [[2960, 1580], [2960, 1245]], pill: [2350, 1700], lines: ['checks out', 'main source'], hw: 330, hh: 140 },
-        'x-gha-x-ghpages': { pts: [[3005, 1745], [3005, 2080]], pill: [2250, 2075], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205 },
+        'x-ghrepo-x-gha': { pts: [[3050, 1245], [3050, 1580]], pill: [2260, 1310], lines: ['push to main', 'triggers the', 'workflow'], hw: 390, hh: 205 },
+        'x-gha-x-ghrepo': { pts: [[2960, 1580], [2960, 1245]], pill: [2290, 1700], lines: ['checks out', 'main source'], hw: 330, hh: 140 },
+        'x-gha-x-ghpages': { pts: [[3005, 1745], [3005, 2080]], pill: [2220, 2075], lines: ['deploys the', 'built site +', 'verifies live'], hw: 420, hh: 205 },
         // pages -> visitor: dedicated lane around the right and top edges
-        'x-ghpages-p-visitor': { pts: [[3254, 2162], [3320, 2162], [3320, 180], [2380, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
-        'x-intodo-s-vana': { pts: [[508, 1662], [900, 1662], [900, 1168]], pill: [1080, 1662], lines: ['one-time extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
+        'x-ghpages-p-visitor': { pts: [[3254, 2241], [3320, 2241], [3320, 180], [2280, 180]], pill: [2900, 180], lines: ['serves the page', '(HTTPS)'], hw: 480, hh: 140 },
+        'x-intodo-s-vana': { pts: [[508, 1662], [900, 1662], [900, 1168]], pill: [1080, 1662], lines: ['one-time', 'extraction;', 'original page', 'unchanged'], hw: 510, hh: 205 },
     };
     const authSysGeoms = (snap: boolean): RelGeom[] => SYS_RELS.map((rel) => {
         const a = AUTH_SYS[`${rel.a}-${rel.b}`];
@@ -1529,8 +1644,8 @@ function Canvas() {
     const sysRels: RelGeom[] = authSysGeoms(true);
     // System band: people/externals render as labeled boxes and every
     // relationship carries a SHORT TEXT PILL (textLabels=true): unlabeled
-    // hairlines made the overview unreadable on a phone (owner screenshot,
-    // 15 Nov). Pills are screen-constant, avoid nodes and each other, and
+    // hairlines made the overview unreadable on a phone. Pills are
+    // screen-constant, avoid nodes and each other, and
     // declutter Maps-style; a hidden pill's edge line stays and every
     // relation remains in the docked key.
     // Supporting views (dynamic flow / deployment) reuse the same
@@ -1873,8 +1988,11 @@ function Canvas() {
         <div className="rc-dockbar">
             <button type="button" className={`rc-dockchip${dock === 'menu' ? ' rc-dockchip-on' : ''}`} onClick={() => setDock(dock === 'menu' ? 'none' : 'menu')}>{dock === 'menu' ? 'Close menu' : 'Menu'}</button>
             <button type="button" className="rc-dockchip" onClick={() => { viewTouched.current = true; fitView(); }}>Fit map</button>
+            {/* Jump to: pick a specific concept, container, component or
+                code file from the bottom nav. */}
+            <button type="button" className={`rc-dockchip${jumpOpen ? ' rc-dockchip-on' : ''}`} onClick={() => setJumpOpen(!jumpOpen)}>{jumpOpen ? 'Close jump' : 'Jump to'}</button>
             {/* C1-C4 camera shortcuts: jump the camera to each C4 level of
-                the SAME territory (owner request, 15 Nov). Not view modes;
+                the SAME territory. Not view modes;
                 the active level follows the current zoom band. */}
             <span className="rc-c4jump" role="group" aria-label="Camera shortcuts">
                 {([['sys', 'C1', 'C1 system context'], ['grp', 'C2', 'C2 containers'], ['comp', 'C3', 'C3 components'], ['code', 'C4', 'C4 code']] as const).map(([lv, lab, tip]) => (
@@ -1908,6 +2026,55 @@ function Canvas() {
                     <button type="button" className="rc-overlay-back" onClick={() => setFocusedId(null)}>Back to canvas</button>
                 </div>
                 <div className="rc-overlay-body">{cards[overlayId]}</div>
+            </div>
+        ) : null}
+        {jumpOpen ? (
+            <div className="rc-overlay rc-gsheet" role="dialog" aria-modal="true" aria-label="Jump to">
+                <div className="rc-overlay-head">
+                    <button type="button" className="rc-overlay-back" onClick={() => setJumpOpen(false)}>Back to canvas</button>
+                </div>
+                <div className="rc-overlay-body">
+                    <h2 className="rc-gsheet-title">Jump to</h2>
+                    <p className="rc-gsheet-sub">A concept, container, component or code file on this map</p>
+                    <span className="rc-menu-head">Concepts - system context</span>
+                    {SYS_NODES.filter((n) => n.kind !== 'system').map((n) => (
+                        <button key={n.id} type="button" className="rc-grow" onClick={() => { setJumpOpen(false); focusSysNode(n.id); }}>
+                            <span className="rc-growtext">
+                                <span className="rc-growtitle">{n.label}</span>
+                                <span className="rc-growtag">{n.sub}</span>
+                            </span>
+                            <span className={`rc-kindtag rc-kindtag-${n.kind}`}>{KIND_TAG[n.kind]}</span>
+                        </button>
+                    ))}
+                    <span className="rc-menu-head">Containers</span>
+                    {C4_CONTAINERS.map((g) => (
+                        <button key={g.id} type="button" className="rc-grow" onClick={() => { setJumpOpen(false); focusGroup(g.id); }}>
+                            <span className="rc-growtext">
+                                <span className="rc-growtitle">{g.label}</span>
+                                <span className="rc-growtag">{g.sub}</span>
+                            </span>
+                            <span className={`rc-kindtag rc-kindtag-${g.kind}`}>{KIND_TAG[g.kind]}</span>
+                        </button>
+                    ))}
+                    <span className="rc-menu-head">Components</span>
+                    {COMPONENTS.map((cp) => (
+                        <button key={cp.id} type="button" className="rc-grow" onClick={() => { setJumpOpen(false); focusTile(cp.id); }}>
+                            <span className="rc-growtext">
+                                <span className="rc-growtitle">{cp.name}</span>
+                                <span className="rc-growtag">{cp.tech}</span>
+                            </span>
+                        </button>
+                    ))}
+                    <span className="rc-menu-head">Code files @{CODE_COMMIT_SHORT}</span>
+                    {CODE_ROOMS.map((r) => (
+                        <button key={r.file} type="button" className="rc-grow" onClick={() => { setJumpOpen(false); focusRoom(r.file); }}>
+                            <span className="rc-growtext">
+                                <span className="rc-growtitle">{r.file.split('/').pop()}</span>
+                                <span className="rc-growtag">{r.file}{FILE_LINES[r.file] != null ? ` · ${FILE_LINES[r.file]} lines` : ''}</span>
+                            </span>
+                        </button>
+                    ))}
+                </div>
             </div>
         ) : null}
         {sheetOpen ? (
