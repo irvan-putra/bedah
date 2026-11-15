@@ -1,6 +1,6 @@
-// Generated from irvan-putra/vana @ 8dc88b2 by gen_sections.py - do not hand-edit.
-export const COMMIT = "8dc88b23926075546209578b2a05477942bff7bd";
-export const COMMIT_SHORT = "8dc88b2";
+// Generated from irvan-putra/vana @ 7e45cef by gen_sections.py - do not hand-edit.
+export const COMMIT = "7e45cef60f2e7dd63d2c31dbb031a87cc9a5edec";
+export const COMMIT_SHORT = "7e45cef";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -18,7 +18,7 @@ export const SECTIONS: Section[] = [
       },
       {
         "path": "territory.tsx",
-        "lines": 442
+        "lines": 463
       },
       {
         "path": "main.tsx",
@@ -45,8 +45,8 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "e583240a0180",
-    "totalLines": 3637
+    "digest": "77a9ff7ff1b8",
+    "totalLines": 3658
   },
   {
     "id": "content-data",
