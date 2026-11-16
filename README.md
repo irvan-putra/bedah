@@ -100,6 +100,11 @@ missed 11 constants on shared lines; 4 Python nested defs only exist since the
 AST pass was written. The final map counts in `src/codemap.ts` come from a
 different corpus (the final worktree) and are not comparable to these.
 
+## Research notes
+
+- [Ideas for checking code you did not write](docs/research/ideas-for-checking-code-you-did-not-write.md) - exploratory notes on review, formal proofs and trust, with limits stated.
+- [Two ways to build a code map](docs/research/code-map-and-doc-structure.md) - an account of the repo’s regex and syntax-tree extractors and a proposed way to structure docs.
+
 ## Build and deploy
 
     sh build.sh          # writes dist/: index.html + fingerprinted assets
