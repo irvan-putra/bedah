@@ -44,7 +44,16 @@ export function useLocalState<T>(key: string, initial: T): [T, (v: T) => void, L
     const storageKey = `bedah-review.${key}`;
     const [value, setValue] = useState<T>(() => {
         try {
-            const raw = window.localStorage.getItem(storageKey);
+            let raw = window.localStorage.getItem(storageKey);
+            if (raw == null) {
+                // Keys written by older builds keep their data: copy once, then remove.
+                const legacy = window.localStorage.getItem(`vana-review.${key}`);
+                if (legacy != null) {
+                    window.localStorage.setItem(storageKey, legacy);
+                    window.localStorage.removeItem(`vana-review.${key}`);
+                    raw = legacy;
+                }
+            }
             return raw != null ? (JSON.parse(raw) as T) : initial;
         } catch {
             return initial;
