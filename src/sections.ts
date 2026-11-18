@@ -1,6 +1,6 @@
-// Generated from irvan-putra/bedah @ 7e45cef by gen_sections.py - do not hand-edit.
-export const COMMIT = "7e45cef60f2e7dd63d2c31dbb031a87cc9a5edec";
-export const COMMIT_SHORT = "7e45cef";
+// Generated from irvan-putra/bedah @ e12fa35 by gen_sections.py - do not hand-edit.
+export const COMMIT = "e12fa3599c8bfef968279b798d7a1e969522b26a";
+export const COMMIT_SHORT = "e12fa35";
 export type SectionFile = { path: string; lines: number | null; note?: string };
 export type Section = { id: string; title: string; tag: string; icon: string; purpose: string; link: string; digest: string; totalLines: number; files: SectionFile[]; notChecked: string[] };
 export const SECTIONS: Section[] = [
@@ -14,11 +14,11 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "App.tsx",
-        "lines": 2201
+        "lines": 2198
       },
       {
         "path": "territory.tsx",
-        "lines": 463
+        "lines": 513
       },
       {
         "path": "main.tsx",
@@ -45,8 +45,8 @@ export const SECTIONS: Section[] = [
       "Small-phone and screen-reader pass over every zoom band",
       "Saved-layout restore across browsers (localStorage is per browser, by design)"
     ],
-    "digest": "77a9ff7ff1b8",
-    "totalLines": 3658
+    "digest": "5ca930ec92f5",
+    "totalLines": 3705
   },
   {
     "id": "content-data",
@@ -110,7 +110,7 @@ export const SECTIONS: Section[] = [
     "notChecked": [
       "Curated component names and section assignments inside the generators are judgment, reviewed only by reading them here"
     ],
-    "digest": "e4928b62cfc7",
+    "digest": "db1a9a65d9e5",
     "totalLines": 1179
   },
   {
@@ -145,7 +145,7 @@ export const SECTIONS: Section[] = [
     "notChecked": [
       "A failed deploy rollback (verify_live.sh only proves the new bytes went live, not that an old page returns on failure)"
     ],
-    "digest": "7b7aafc0b3c5",
+    "digest": "90cf7dd41fda",
     "totalLines": 758
   },
   {
@@ -158,7 +158,7 @@ export const SECTIONS: Section[] = [
     "files": [
       {
         "path": "README.md",
-        "lines": 119
+        "lines": 125
       },
       {
         "path": ".gitignore",
@@ -166,7 +166,7 @@ export const SECTIONS: Section[] = [
       }
     ],
     "notChecked": [],
-    "digest": "fd72afd4f465",
-    "totalLines": 122
+    "digest": "769ccdaece22",
+    "totalLines": 128
   }
 ];
