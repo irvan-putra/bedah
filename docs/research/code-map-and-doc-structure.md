@@ -14,3 +14,7 @@ Judgment, not a benchmark: regex is simple but can link names that only appear i
 - C4 (https://c4model.com) describes software at four zoom levels: context, containers, components, code. It suits the map views.
 - Diataxis (https://diataxis.fr) separates tutorials, how-to guides, reference and explanation. Using it keeps the review guide, the how-to steps and the design rationale apart.
 - "The map is not the territory": a generated map shows what the extractor could see, so each map should say which extractor made it and what it may miss.
+
+## Further reading
+
+[Diataxis, C4 and Endless Paper](diataxis-c4-endless-paper.md) expands the documentation and map references above with official sources, an original diagram, current Bedah source checks and proposals that are not implemented features.

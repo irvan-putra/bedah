@@ -105,6 +105,8 @@ different corpus (the final worktree) and are not comparable to these.
 - [Ideas for checking code you did not write](docs/research/ideas-for-checking-code-you-did-not-write.md) - exploratory notes on review, formal proofs and trust, with limits stated.
 - [Two ways to build a code map](docs/research/code-map-and-doc-structure.md) - an account of the repo’s regex and syntax-tree extractors and a proposed way to structure docs.
 
+- [Diataxis, C4 and Endless Paper](docs/research/diataxis-c4-endless-paper.md) - reader needs, architecture scope and spatial navigation, with a source-grounded comparison and ideas clearly separated from current features.
+
 ## Build and deploy
 
     sh build.sh          # writes dist/: index.html + fingerprinted assets
