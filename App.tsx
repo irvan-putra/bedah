@@ -722,8 +722,18 @@ function SectionCard({ s, mark, expanded, finding, onToggleExpand, onMark, onFin
     </CardShell>;
 }
 
+// Accept a saved blob only when the fields the canvas reads are present and
+// numeric; anything else is preserved by the storage hook for recovery.
+const isSaved = (v: unknown): v is Saved => {
+    if (!v || typeof v !== 'object') return false;
+    const s = v as Saved;
+    const camOk = !!s.cam && Number.isFinite(s.cam.x) && Number.isFinite(s.cam.y) && Number.isFinite(s.cam.z);
+    const posOk = !!s.pos && typeof s.pos === 'object';
+    return camOk && posOk;
+};
+
 function Canvas() {
-    const [saved, setSaved, savedMeta] = useLocalState<Saved | null>('review-canvas.v1', null);
+    const [saved, setSaved, savedMeta] = useLocalState<Saved | null>('review-canvas.v1', null, isSaved);
     const [cam, setCam] = useState<Cam>(saved?.cam ?? { x: 1600, y: 1600, z: 0.17 });
     const [pos, setPos] = useState<Record<string, Pos>>(sanePositions(saved?.pos ?? {}));
     const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -797,7 +807,7 @@ function Canvas() {
         if (!appliedSaved.current && savedMeta.ready && saved) {
             appliedSaved.current = true;
             setCam(saved.cam);
-            setPos(sanePositions(saved.pos));
+            setPos(sanePositions(saved.pos ?? {}));
             setReviews(saved.reviews ?? {});
             setFindings(saved.findings ?? {});
         }

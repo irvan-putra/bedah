@@ -40,7 +40,7 @@ export type LocalMeta = { ready: boolean; message: string };
 
 // Same contract as the hosted hook: [value, setValue, meta]. Persisted per
 // key in this browser's localStorage; nothing leaves the device.
-export function useLocalState<T>(key: string, initial: T): [T, (v: T) => void, LocalMeta] {
+export function useLocalState<T>(key: string, initial: T, validate?: (v: unknown) => v is T): [T, (v: T) => void, LocalMeta] {
     const storageKey = `bedah-review.${key}`;
     const [value, setValue] = useState<T>(() => {
         try {
@@ -54,8 +54,20 @@ export function useLocalState<T>(key: string, initial: T): [T, (v: T) => void, L
                     raw = legacy;
                 }
             }
-            return raw != null ? (JSON.parse(raw) as T) : initial;
+            if (raw == null) return initial;
+            const parsed: unknown = JSON.parse(raw);
+            if (validate && !validate(parsed)) throw new Error('saved shape not recognized');
+            return parsed as T;
         } catch {
+            // An unreadable or unrecognized blob is moved aside for recovery,
+            // never deleted or overwritten silently; the app starts fresh.
+            try {
+                const raw = window.localStorage.getItem(storageKey);
+                if (raw != null) {
+                    window.localStorage.setItem(`${storageKey}.recovery`, raw);
+                    window.localStorage.removeItem(storageKey);
+                }
+            } catch { /* storage full or blocked: leave the blob where it is */ }
             return initial;
         }
     });
