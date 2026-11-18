@@ -1,4 +1,4 @@
-# vana - self-review canvas
+# bedah - self-review canvas
 
 A full-screen review canvas that reviews its own repository. The cards,
 diagrams and code facts on the page describe this repo's source at the
@@ -6,7 +6,7 @@ pinned commit, so the page is both the review surface and the thing under
 review. Extracted from the intodo review canvas, which keeps its own
 unchanged page at <https://vanipy.com/intodo/review/>.
 
-Live at <https://vanipy.com/vana/>.
+Live at <https://vanipy.com/bedah/>.
 
 ## What it is
 
@@ -33,14 +33,14 @@ The cards describe this repository and are generated from it:
   responsibilities, declarations, static references).
 
 Both carry the commit they were generated from, shown in the UI, so the
-cards never claim to describe a newer vana than they do. The generated
+cards never claim to describe a newer bedah than they do. The generated
 files are excluded from their own digests - a self-referential content hash
 can never stabilise. To refresh the content after the source changes:
 
-    python3 tools/gen_sections.py --repo /path/to/vana --out src/sections.ts
-    python3 tools/gen_code.py    --repo /path/to/vana --out src/code.ts
+    python3 tools/gen_sections.py --repo /path/to/bedah --out src/sections.ts
+    python3 tools/gen_code.py    --repo /path/to/bedah --out src/code.ts
 
-Both generators take any local vana checkout (`--commit` / `--from-git`
+Both generators take any local bedah checkout (`--commit` / `--from-git`
 for exact pinning) and change nothing else in this repo.
 
 ## The map

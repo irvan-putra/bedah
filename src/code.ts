@@ -1,4 +1,4 @@
-// Generated from irvan-putra/vana @ 7e45cef by gen_code.py - do not hand-edit.
+// Generated from irvan-putra/bedah @ 7e45cef by gen_code.py - do not hand-edit.
 // Component names/file assignment/tech labels are the generator's curated CONFIG;
 // responsibilities are CURATED concise summaries (architectural interpretation);
 // file lines are verbatim first header sentences; declarations and references
@@ -431,7 +431,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "src/sections.ts": {
     "path": "src/sections.ts",
     "lines": 172,
-    "role": "Generated from irvan-putra/vana @ 7e45cef by gen_sections.py - do not hand-edit.",
+    "role": "Generated from irvan-putra/bedah @ 7e45cef by gen_sections.py - do not hand-edit.",
     "els": [
       {
         "name": "COMMIT",
@@ -468,7 +468,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "tools/gen_sections.py": {
     "path": "tools/gen_sections.py",
     "lines": 142,
-    "role": "Portable: point at any local vana checkout and any output path.",
+    "role": "Portable: point at any local bedah checkout and any output path.",
     "els": [
       {
         "name": "_size_and_lines",
@@ -695,7 +695,7 @@ export const CODE_FILES: Record<string, CodeFile> = {
   "README.md": {
     "path": "README.md",
     "lines": 119,
-    "role": "vana - self-review canvas",
+    "role": "bedah - self-review canvas",
     "els": [],
     "kindNote": "doc",
     "intraRefs": []

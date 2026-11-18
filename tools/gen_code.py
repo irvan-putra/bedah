@@ -11,7 +11,7 @@ import codemap_scan
 # scan, relationships from a static reference scan (a referenced NAME, not
 # a proven runtime call - the UI labels them "references").
 #
-#   python3 gen_code.py --repo /path/to/vana --out ../src/code.ts
+#   python3 gen_code.py --repo /path/to/bedah --out ../src/code.ts
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--repo', default='.')
@@ -351,7 +351,7 @@ for c in CONFIG:
 
 crefs = [dict(a=a, b=b, via=sorted(set(v))[:6]) for (a, b), v in sorted(comp_refs.items())]
 
-header = ('// Generated from irvan-putra/vana @ %s by gen_code.py - do not hand-edit.\n'
+header = ('// Generated from irvan-putra/bedah @ %s by gen_code.py - do not hand-edit.\n'
           '// Component names/file assignment/tech labels are the generator\'s curated CONFIG;\n'
           '// responsibilities are CURATED concise summaries (architectural interpretation);\n'
           '// file lines are verbatim first header sentences; declarations and references\n'
@@ -370,7 +370,7 @@ out.append('export const CODE_FILES: Record<string, CodeFile> = %s;' % json.dump
 text = '\n'.join(out) + '\n'
 
 # ---- code map (src/codemap.ts): declarations + typed static edges ----
-GEN_HDR = ('// Generated from irvan-putra/vana @ %s by gen_code.py - do not hand-edit.\n' % SHORT)
+GEN_HDR = ('// Generated from irvan-putra/bedah @ %s by gen_code.py - do not hand-edit.\n' % SHORT)
 map_files = {}
 for c in CONFIG:
     for f in c['files']:
@@ -420,7 +420,7 @@ for _p in sorted(_paths):
             elif len(_dn.get(_t, [])) == 1: docrefs.append(dict(file=_p, line=_i, token=_t, target=_dn[_t][0], kind='declaration-name'))
 cmap = {c['id']: c['container'] for c in CONFIG}
 file_comp = {f: c['id'] for c in CONFIG for f in c['files']}
-cm_out = ['// Generated from irvan-putra/vana @ %s by gen_code.py - do not hand-edit.' % SHORT,
+cm_out = ['// Generated from irvan-putra/bedah @ %s by gen_code.py - do not hand-edit.' % SHORT,
           '// Static scan, not a parser and not a call graph. Declarations are named top-level items (plus named inner',
           '// functions of top-level functions); edge kinds are listed in CM_EDGE_KINDS. No edge is a proven runtime call.',
           'export const CM_COMMIT_SHORT = "%s";' % SHORT,

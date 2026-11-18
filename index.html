@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>vana - review itself in sections</title>
-<meta name="description" content="Working review surface for irvan-putra/vana: the canvas reviews its own source - sections, exact file links at the pinned commit, review marks and findings kept in your browser.">
+<title>bedah - review itself in sections</title>
+<meta name="description" content="Working review surface for irvan-putra/bedah: the canvas reviews its own source - sections, exact file links at the pinned commit, review marks and findings kept in your browser.">
 </head>
 <body>
 <div id="root"></div>
@@ -14,8 +14,8 @@
    instead of sitting on a blank page. */
 window.addEventListener('error', function (e) {
     var t = e && e.target;
-    if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && !sessionStorage.getItem('vana-reloaded')) {
-        sessionStorage.setItem('vana-reloaded', '1');
+    if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && !sessionStorage.getItem('bedah-reloaded')) {
+        sessionStorage.setItem('bedah-reloaded', '1');
         location.replace(location.pathname + '?r=' + Date.now());
     }
 }, true);

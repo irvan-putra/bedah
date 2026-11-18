@@ -13,7 +13,7 @@ type Saved = { cam: Cam; pos: Record<string, Pos>; reviews?: Record<string, Mark
 const WORLD = { w: 3200, h: 3200 };
 const ZMIN = 0.07, ZMAX = 16;
 // Zoom bands, C4-style progressive disclosure (c4model.com):
-//   z < SYS_Z    system context: people + the vana system + external systems
+//   z < SYS_Z    system context: people + the bedah system + external systems
 //   z < GROUP_Z  container level: the repo's runnable units + code-evidenced
 //                relationships; tap a container to open its sections
 //   z < COMP_Z   component level: bounded component overview tiles (fixed
@@ -82,7 +82,7 @@ const DEFAULT_POS: Record<string, Pos> = {
 };
 
 
-// C4 model of vana itself, grounded in this repo at the pinned snapshot
+// C4 model of bedah itself, grounded in this repo at the pinned snapshot
 // (see sections.ts COMMIT; each relationship names its evidence file).
 // Runnable container: the canvas web app. The generators are hand-run CLIs;
 // build/deploy and repo docs stay one honestly-labeled supporting group,
@@ -99,7 +99,7 @@ const C4_CONTAINERS: C4Node[] = [
     { id: 'c-app', label: 'Canvas web app', sub: 'React + esbuild static bundle', kind: 'container', frac: { fx: 0.5, fy: 0.15 },
       members: ['canvas-ui', 'content-data'], attached: ['howto', 'rule', 'permanence', 'progress'] },
     // The generators are runnable containers in C4 terms (CLI applications):
-    // they read a local vana checkout and write the review content. They run
+    // they read a local bedah checkout and write the review content. They run
     // by hand, never in CI, so there is no edge from them to GitHub Actions.
     { id: 'c-gen', label: 'Content generators', sub: 'Python CLIs, run by hand', kind: 'container', frac: { fx: 0.24, fy: 0.5 }, members: ['generators'] },
     // Build/deploy pipeline and repo docs stay one honestly-labeled
@@ -113,9 +113,9 @@ const C4_CONTAINERS: C4Node[] = [
 // arrow ambiguous; each edge now names the
 // target it actually talks to, with deploy.yml as the evidence.
 const C4_EXTERNALS: C4Node[] = [
-    { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/vana source', kind: 'external', frac: { fx: 0.8, fy: 0.14 } },
+    { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/bedah source', kind: 'external', frac: { fx: 0.8, fy: 0.14 } },
     { id: 'x-gha', label: 'GitHub Actions', sub: 'two-job build + deploy on push', kind: 'external', frac: { fx: 0.18, fy: 0.24 } },
-    { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/vana', kind: 'external', frac: { fx: 0.8, fy: 0.34 } },
+    { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/bedah', kind: 'external', frac: { fx: 0.8, fy: 0.34 } },
 ];
 // People on the container view: the owner who writes and regenerates the
 // content, and the visitor reviewing the page in their own browser.
@@ -226,15 +226,15 @@ const C4_RELS: C4Rel[] = [
 const SYS_NODES: C4Node[] = [
     { id: 'p-owner', label: 'Owner', sub: 'writes + reviews', kind: 'person', frac: { fx: 0.22, fy: 0.2 } },
     { id: 'p-visitor', label: 'Visitor', sub: 'anyone with the link', kind: 'person', frac: { fx: 0.78, fy: 0.2 } },
-    { id: 's-vana', label: 'vana', sub: 'self-review canvas', kind: 'system', frac: { fx: 0.5, fy: 0.44 } },
-    { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/vana source', kind: 'external', frac: { fx: 0.84, fy: 0.36 } },
+    { id: 's-bedah', label: 'bedah', sub: 'self-review canvas', kind: 'system', frac: { fx: 0.5, fy: 0.44 } },
+    { id: 'x-ghrepo', label: 'GitHub repo', sub: 'irvan-putra/bedah source', kind: 'external', frac: { fx: 0.84, fy: 0.36 } },
     { id: 'x-gha', label: 'GitHub Actions', sub: 'two-job build + deploy on push', kind: 'external', frac: { fx: 0.84, fy: 0.52 } },
-    { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/vana', kind: 'external', frac: { fx: 0.84, fy: 0.68 } },
+    { id: 'x-ghpages', label: 'GitHub Pages', sub: 'hosts vanipy.com/bedah', kind: 'external', frac: { fx: 0.84, fy: 0.68 } },
 ];
 const SYS_RELS: C4Rel[] = [
-    { a: 'p-owner', b: 's-vana', label: 'writes + reviews' },
-    { a: 'p-visitor', b: 's-vana', label: 'reads + marks (local only)' },
-    { a: 's-vana', b: 'x-ghrepo', label: 'source links at pinned commit' },
+    { a: 'p-owner', b: 's-bedah', label: 'writes + reviews' },
+    { a: 'p-visitor', b: 's-bedah', label: 'reads + marks (local only)' },
+    { a: 's-bedah', b: 'x-ghrepo', label: 'source links at pinned commit' },
     { a: 'p-owner', b: 'x-ghrepo', label: 'pushes source' },
     { a: 'x-ghrepo', b: 'x-gha', label: 'push to main triggers the workflow', side: 1 },
     { a: 'x-gha', b: 'x-ghrepo', label: 'checks out main source', side: -1 },
@@ -694,7 +694,7 @@ function SectionCard({ s, mark, expanded, finding, onToggleExpand, onMark, onFin
         <p>{s.purpose}</p>
         <ul className="rc-files">
             {shown.map((fl) => (
-                <li key={fl.path}><TextLink href={`https://github.com/irvan-putra/vana/blob/${COMMIT}/${fl.path}`}><code>{fl.path.split('/').pop()}</code></TextLink>{fl.lines != null ? ` - ${fl.lines} lines` : fl.note ? ` - ${fl.note}` : ''}</li>
+                <li key={fl.path}><TextLink href={`https://github.com/irvan-putra/bedah/blob/${COMMIT}/${fl.path}`}><code>{fl.path.split('/').pop()}</code></TextLink>{fl.lines != null ? ` - ${fl.lines} lines` : fl.note ? ` - ${fl.note}` : ''}</li>
             ))}
         </ul>
         {s.files.length > 5 && (
@@ -707,7 +707,7 @@ function SectionCard({ s, mark, expanded, finding, onToggleExpand, onMark, onFin
         <ul>
             {s.notChecked.map((n) => <li key={n}>{n}</li>)}
         </ul>
-        <p><TextLink href={`https://github.com/irvan-putra/vana/tree/${COMMIT}/${s.link}`}>Open this folder at {COMMIT_SHORT}</TextLink></p>
+        <p><TextLink href={`https://github.com/irvan-putra/bedah/tree/${COMMIT}/${s.link}`}>Open this folder at {COMMIT_SHORT}</TextLink></p>
         <p className="rc-nchead">Your findings</p>
         <textarea
             className="rc-findings"
@@ -1095,12 +1095,12 @@ function Canvas() {
     };
 
     // Jump sheet focus for a system-context concept (person, external
-    // system, or the vana boundary itself). Stays inside the system band so
+    // system, or the bedah boundary itself). Stays inside the system band so
     // the C1 rendering stays on; the whole diagram fits phone width at this
     // zoom anyway, so this is a re-centering, not a zoom-in.
     const focusSysNode = (id: string) => {
         viewTouched.current = true;
-        if (id === 's-vana') { bandView('sys'); return; }
+        if (id === 's-bedah') { bandView('sys'); return; }
         setJumpFocus(null);
         const n = sysLayout.find((x) => x.g.id === id);
         if (!n) return;
@@ -1559,7 +1559,7 @@ function Canvas() {
     // same world rect at the system, container and section bands; only what
     // is visible inside it changes with zoom (LOD), never geometry.
     const sysLayout: GroupNode[] = [
-        { g: SYS_NODES.find((x) => x.id === 's-vana')!, ...SYS_BOX },
+        { g: SYS_NODES.find((x) => x.id === 's-bedah')!, ...SYS_BOX },
         // Visitor sits a slot left of its first placement: the "serves the
         // page (HTTPS)" pill on the lane into its right edge nearly touched
         // the box on a phone.
@@ -1573,7 +1573,7 @@ function Canvas() {
     // when the pipeline was hidden at this band. Pills hide at the far tier (edge lines
     // stay); the docked key always lists every relation.
     const GRP_EXTRA_RELS = SYS_RELS.filter((r) =>
-        (r.a === 'p-owner' && r.b === 's-vana') || (r.a === 'p-visitor' && r.b === 's-vana'));
+        (r.a === 'p-owner' && r.b === 's-bedah') || (r.a === 'p-visitor' && r.b === 's-bedah'));
     // Authored container-band composition: every relationship has an
     // explicit port-to-port route through dedicated gutters/lanes, and its
     // label is a fixed world-size pill placed next to its own connector
@@ -1600,8 +1600,8 @@ function Canvas() {
         // (people row raised to fy 0.03): each pill sits on its own
         // connector, world-sized like the other authored pills, so it reads
         // at reading zoom and declutters Maps-style at the far band.
-        'p-owner-s-vana': { pts: [[1007, 320], [1007, 508]], pill: [1007, 410], lines: ['writes +', 'reviews'], hw: 130 },
-        'p-visitor-s-vana': { pts: [[2006, 320], [2006, 508]], pill: [2006, 410], lines: ['reads + marks', '(local only)'], hw: 190 },
+        'p-owner-s-bedah': { pts: [[1007, 320], [1007, 508]], pill: [1007, 410], lines: ['writes +', 'reviews'], hw: 130 },
+        'p-visitor-s-bedah': { pts: [[2006, 320], [2006, 508]], pill: [2006, 410], lines: ['reads + marks', '(local only)'], hw: 190 },
     };
     // System band: SAME relationships, authored for the C4 System Context
     // poster: unlabeled crossing hairlines at the repo/Actions cluster read
@@ -1612,10 +1612,10 @@ function Canvas() {
     const AUTH_SYS: Record<string, { pts: [number, number][]; pill: [number, number]; lines: string[]; hw?: number; hh?: number; lead?: number }> = {
         // people -> system chip: owner drops straight into the chip top;
         // visitor steps left under the pushes-source lane, then into the top
-        'p-owner-s-vana': { pts: [[1007, 320], [1007, 750]], pill: [1007, 390], lines: ['writes + reviews'], hw: 510, hh: 78 },
-        'p-visitor-s-vana': { pts: [[2006, 320], [2006, 700], [1500, 700], [1500, 750]], pill: [2006, 390], lines: ['reads + marks'], hw: 420, hh: 78 },
+        'p-owner-s-bedah': { pts: [[1007, 320], [1007, 750]], pill: [1007, 390], lines: ['writes + reviews'], hw: 510, hh: 78 },
+        'p-visitor-s-bedah': { pts: [[2006, 320], [2006, 700], [1500, 700], [1500, 750]], pill: [2006, 390], lines: ['reads + marks'], hw: 420, hh: 78 },
         // chip right edge -> repo left edge, straight across the open middle
-        's-vana-x-ghrepo': { pts: [[1560, 900], [2950, 900]], pill: [2200, 880], lines: ['source links at', 'pinned commit'], hw: 420, hh: 140 },
+        's-bedah-x-ghrepo': { pts: [[1560, 900], [2950, 900]], pill: [2200, 880], lines: ['source links at', 'pinned commit'], hw: 420, hh: 140 },
         // owner -> repo: up between the people boxes, across the top, down
         // into the repo top; the descent crosses the pages->visitor lane
         // where the serves pill paints over it (no visible junction)
@@ -1727,7 +1727,7 @@ function Canvas() {
             <ul>
                 <li>Your view, review marks and findings are remembered in this browser's local storage on this static page. Cards stay fixed in place.</li>
                 <li>Not synced across devices; clearing browser storage resets them.</li>
-                <li>Public repo content only, generated from irvan-putra/vana @ {COMMIT_SHORT} on Nov 14, 2026; nothing is sent anywhere or published with this page, and nothing here changes the repo.</li>
+                <li>Public repo content only, generated from irvan-putra/bedah @ {COMMIT_SHORT} on Nov 14, 2026; nothing is sent anywhere or published with this page, and nothing here changes the repo.</li>
                 <li>Marks made on the old intodo review page stay under that page's own storage keys and do not carry over here.</li>
                 <li>Long-term ownership (export, backup) is an open question, not a claim.</li>
             </ul>
@@ -1787,7 +1787,7 @@ function Canvas() {
                     })}
                 </div>
 
-                {/* system context level: people + the vana system + external
+                {/* system context level: people + the bedah system + external
                     systems, furthest zoomed out. Tapping the system drops
                     into the container level. */}
                 <svg className="rc-sysedges" width={WORLD.w} height={WORLD.h}>
@@ -2037,7 +2037,7 @@ function Canvas() {
                 </div>
                 <span className="rc-menu-head">About / history</span>
                 <div className="rc-menu-detail">
-                    <p>This canvas was extracted once from the intodo review canvas on Nov 14, 2026 - extraction commit <a href="https://github.com/irvan-putra/vana/commit/a40a5e6c7891c6fe43b4a80d95a4e2a3a0d802f7" target="_blank" rel="noreferrer">a40a5e6</a>, with the copied content pinned at intodo fbd0213 (sections) and 1f6ba2f (component/code layers). The extraction was a copy, not a move: the original page kept serving, unaltered by it, at <a href="https://vanipy.com/intodo/review/" target="_blank" rel="noreferrer">vanipy.com/intodo/review</a>, and the original's source had no later commits as of Nov 15, 2026.</p>
+                    <p>This canvas was extracted once from the intodo review canvas on Nov 14, 2026 - extraction commit <a href="https://github.com/irvan-putra/bedah/commit/a40a5e6c7891c6fe43b4a80d95a4e2a3a0d802f7" target="_blank" rel="noreferrer">a40a5e6</a>, with the copied content pinned at intodo fbd0213 (sections) and 1f6ba2f (component/code layers). The extraction was a copy, not a move: the original page kept serving, unaltered by it, at <a href="https://vanipy.com/intodo/review/" target="_blank" rel="noreferrer">vanipy.com/intodo/review</a>, and the original's source had no later commits as of Nov 15, 2026.</p>
                     <p>That relationship used to be drawn as a dashed edge on the system map. It is one-time history, not a live link - nothing on this page fetches from intodo - so it is documented here while the map shows only the current system.</p>
                 </div>
 

@@ -1,4 +1,4 @@
-// Generated from irvan-putra/vana @ 7e45cef by gen_sections.py - do not hand-edit.
+// Generated from irvan-putra/bedah @ 7e45cef by gen_sections.py - do not hand-edit.
 export const COMMIT = "7e45cef60f2e7dd63d2c31dbb031a87cc9a5edec";
 export const COMMIT_SHORT = "7e45cef";
 export type SectionFile = { path: string; lines: number | null; note?: string };
@@ -83,7 +83,7 @@ export const SECTIONS: Section[] = [
     "title": "Content generators",
     "tag": "Tools - Python",
     "icon": "🏭",
-    "purpose": "The CLIs and helpers that regenerate the review content from a local vana checkout. Run by hand, never in CI.",
+    "purpose": "The CLIs and helpers that regenerate the review content from a local bedah checkout. Run by hand, never in CI.",
     "link": "tools",
     "files": [
       {

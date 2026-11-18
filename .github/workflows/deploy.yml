@@ -43,7 +43,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  LIVE_URL: https://vanipy.com/vana/
+  LIVE_URL: https://vanipy.com/bedah/
 
 jobs:
   build:
@@ -87,7 +87,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: https://vanipy.com/vana/
+      url: https://vanipy.com/bedah/
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages

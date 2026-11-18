@@ -1,10 +1,10 @@
 import argparse, hashlib, json, os, sys
 
-# Portable: point at any local vana checkout and any output path.
-#   python3 gen_sections.py --repo /path/to/vana --out src/sections.ts
+# Portable: point at any local bedah checkout and any output path.
+#   python3 gen_sections.py --repo /path/to/bedah --out src/sections.ts
 # Regenerate after any repo change so cards match the pinned commit.
-ap = argparse.ArgumentParser(description='Generate sections.ts for the vana review canvas from a local vana checkout.')
-ap.add_argument('--repo', default='.', help='path to the vana repository root (default: current directory)')
+ap = argparse.ArgumentParser(description='Generate sections.ts for the bedah review canvas from a local bedah checkout.')
+ap.add_argument('--repo', default='.', help='path to the bedah repository root (default: current directory)')
 ap.add_argument('--out', default='-', help='output path for sections.ts (default: stdout)')
 ap.add_argument('--commit', default=None, help='commit hash the cards pin; default: git rev-parse HEAD in --repo')
 ap.add_argument('--from-git', action='store_true', help='read file contents via git show COMMIT:path, so counts and digests describe the pinned commit exactly rather than the worktree')
@@ -77,7 +77,7 @@ SECTIONS = [
              f('src/codemap.ts', 'generated')],
       notChecked=['The generators read a checkout, so a stale checkout means stale cards - the pinned commit on each card is the tell']),
  dict(id='generators', title='Content generators', tag='Tools - Python', icon='\U0001F3ED',
-      purpose='The CLIs and helpers that regenerate the review content from a local vana checkout. Run by hand, never in CI.',
+      purpose='The CLIs and helpers that regenerate the review content from a local bedah checkout. Run by hand, never in CI.',
       link='tools',
       files=[f('tools/gen_sections.py'),
              f('tools/gen_code.py'),
@@ -123,7 +123,7 @@ for s in SECTIONS:
     s['totalLines'] = sum(fl['lines'] or 0 for fl in s['files'])
 
 out = []
-out.append('// Generated from irvan-putra/vana @ %s by gen_sections.py - do not hand-edit.' % SHORT)
+out.append('// Generated from irvan-putra/bedah @ %s by gen_sections.py - do not hand-edit.' % SHORT)
 out.append('export const COMMIT = %s;' % json.dumps(COMMIT))
 out.append('export const COMMIT_SHORT = %s;' % json.dumps(SHORT))
 out.append('export type SectionFile = { path: string; lines: number | null; note?: string };')

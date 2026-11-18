@@ -3,7 +3,7 @@
 Status: written from the repo's own comparison script and the design discussion. The comparison was reported earlier; it was not rerun for this note, so no counts are given here.
 
 ## Regex vs syntax-tree extraction
-The repo has two extractors that build a map of declarations and the links between them. One reads source with regular expressions. The other parses the code into a syntax tree. `tools/compare_extractors.py` (https://raw.githubusercontent.com/irvan-putra/vana/main/tools/compare_extractors.py) runs both on the same files and prints:
+The repo has two extractors that build a map of declarations and the links between them. One reads source with regular expressions. The other parses the code into a syntax tree. `tools/compare_extractors.py` (https://raw.githubusercontent.com/irvan-putra/bedah/main/tools/compare_extractors.py) runs both on the same files and prints:
 - declarations only one side found, and label differences;
 - links only the regex side found, sorted by checking them against the source (matches inside strings or comments, containment, other);
 - links only the syntax-tree side found, sorted by cause (a declaration the regex missed, parent and inner pairs, links into files not split into declarations, word matches the regex missed such as spread names).

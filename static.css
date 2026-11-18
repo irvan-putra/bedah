@@ -327,7 +327,7 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-legend-num.rc-legend-num-dash { border-style: dashed; border-color: var(--ds-ink-2); }
 
 /* System context level (furthest out, C4 system landscape): people + the
-   vana system + external systems. */
+   bedah system + external systems. */
 .rc-sysnodes { display: none; }
 .rc-sysedges { display: none; }
 .rc-sys .rc-world .rc-card,
@@ -447,7 +447,7 @@ a, .rc-card a { color: var(--ds-ink); }
 .rc-sys.rc-sysfar .rc-node-boundary .rc-kindtag { display: none; }
 .rc-sys.rc-sysfar .rc-node-syschip .rc-grpcount,
 .rc-sys.rc-sysfar .rc-node-syschip .rc-kindtag { display: none; }
-/* System band: the vana system renders as a compact solid chip (C4 System
+/* System band: the bedah system renders as a compact solid chip (C4 System
    Context style - the system is one box at this level), not the giant
    dashed boundary that encloses the frame complex at deeper bands. The
    boundary returns with the frames one level in. Text is inverse-scaled
