@@ -4,7 +4,7 @@ Status: research note, 2026-11-20 (WIB). No code changes accompany it, and nothi
 
 ## The question
 
-The naming proposal marks each part of a project with a kind: tanya (asks a model at runtime), pasti (deterministic code), muatan (static content), kait (wiring), kata (words), uji (tests), jauh (outside services), kabut (unknown), plus the bekas provenance tag. This note compares ways to actually do that classification, and whether the classifier belongs in Bedah or in [daya](https://github.com/irvan-putra/daya) as a reusable piece Bedah consumes.
+The naming proposal marks each part of a project with a kind: tanya (asks a model at runtime), tegak (code that stands on its own, no model needed), muatan (static content), kait (wiring), kata (words), uji (tests), jauh (outside services), kabut (unknown), plus the bekas provenance tag. This note compares ways to actually do that classification, and whether the classifier belongs in Bedah or in [daya](https://github.com/irvan-putra/daya) as a reusable piece Bedah consumes.
 
 Two constraints set the shape of every option:
 

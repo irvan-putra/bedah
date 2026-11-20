@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>tanya, pasti, muatan — naming a project's parts by what they need</title>
+<title>tanya, tegak, muatan — naming a project's parts by what they need</title>
 <meta name="description" content="A proposal for marking which parts of a project depend on an AI model, which run plain deterministic code, and which are inert content. Revised names, gaps and overlaps examined. Ideas, not features.">
 <style>
   :root {
@@ -90,9 +90,9 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>tanya, pasti, muatan</h1>
+    <h1>tanya, tegak, muatan</h1>
     <p class="fact">A naming proposal for Bedah &middot; 20 Nov 2026 &middot; proposal, not a feature</p>
-    <p class="intro">How a review canvas could mark, for each part of a project, what that part needs in order to run: an AI model, plain deterministic code, or nothing at all. With names for the kinds, an honest check of where the split fails, and the gaps every repository actually has.</p>
+    <p class="intro">How a review canvas could mark, for each part of a project, what that part needs in order to run: an AI model, plain code that stands on its own, or nothing at all. With names for the kinds, an honest check of where the split fails, and the gaps every repository actually has.</p>
 
     <figure>
       <img src="./parts-map.jpg" alt="Illustrative map of a city divided into districts" width="1536" height="1024">
@@ -105,15 +105,15 @@
     <p>One more split matters and it is not a kind: whether AI <em>wrote</em> a part at build time, or the part <em>calls</em> AI at runtime. That is a tag on the part, not a bucket of its own.</p>
 
     <h2>The three kinds, named</h2>
-    <p>Short Indonesian words, matching this project's naming conventions. An earlier draft of this proposal named them <em>otak</em>, <em>hitung</em> and <em>benda</em>; those read as the human brain, as numeric calculation only, and as physical objects with no room for documents. The names below were chosen to say the meaning themselves. Alternatives are noted, and every name here stays a proposal.</p>
+    <p>Short Indonesian words, matching this project's naming conventions. An earlier draft of this proposal named them <em>otak</em>, <em>hitung</em> and <em>benda</em>; those read as the human brain, as numeric calculation only, and as physical objects with no room for documents. The names below were chosen to say the meaning themselves. A second pass replaced the draft <em>pasti</em> with <em>tegak</em>: the dividing line is needing a model, not repeatable output. Alternatives are noted, and every name here stays a proposal.</p>
 
     <div class="row"><div class="num">1</div><div class="rowbody">
       <div class="rowhead"><span class="name">tanya</span><span class="kind">AI at runtime</span></div>
       <p class="detail">The part <em>asks</em> a model while the app runs. No model, no answer. Model weights and prompt templates live here too: their bytes sit still, but their behavior comes from the model. Also considered: minta, pinjam.</p>
     </div></div>
     <div class="row"><div class="num">2</div><div class="rowbody">
-      <div class="rowhead"><span class="name">pasti</span><span class="kind">algorithm</span></div>
-      <p class="detail">Deterministic code, <em>certain</em>: same input, same output, no model involved. Parsers, schedulers, generators, comparators. Also considered: tetap, ajeg.</p>
+      <div class="rowhead"><span class="name">tegak</span><span class="kind">algorithm</span></div>
+      <p class="detail">Code that <em>stands on its own</em>: it needs no model to run, whether or not its output is repeatable. Parsers, schedulers, generators, comparators, randomized algorithms, concurrent code. Also considered: pasti, tetap, ajeg.</p>
     </div></div>
     <div class="row"><div class="num">3</div><div class="rowbody">
       <div class="rowhead"><span class="name">muatan</span><span class="kind">static content</span></div>
@@ -122,11 +122,15 @@
 
     <h2>Where the three overlap</h2>
     <ul>
-      <li>A model weights file is static bytes with AI behavior. Classify by behavior: tanya, with the file form noted.</li>
-      <li>A prompt template is plain text that means nothing without the model: tanya, not muatan.</li>
-      <li>Code an AI wrote at build time now runs deterministically: pasti, carrying the bekas tag below.</li>
-      <li>Generated data such as Bedah's own <code>src/codemap.ts</code> is muatan produced by pasti. Two kinds, one build step apart.</li>
+      <li>A model weights file is static bytes with AI behavior: muatan in form, tanya in behavior. Both marks are shown; neither swallows the other.</li>
+      <li>A prompt template is plain text that means nothing without the model: muatan bytes, tanya behavior, the same pairing.</li>
+      <li>Code an AI wrote at build time now runs with no model: tegak, carrying the bekas tag below.</li>
+      <li>Generated data such as Bedah's own <code>src/codemap.ts</code> is muatan produced by tegak. Two kinds, one build step apart.</li>
     </ul>
+    <p>Form and behavior are separate dimensions. Forcing a weights file into one bucket either hides that it is inert bytes on disk or hides that the product stops working without it; the map can afford both marks.</p>
+
+    <h2>Deterministic is not the dividing line</h2>
+    <p>A randomized algorithm, a concurrent system, or anything reading the clock is <strong>tegak</strong> (needs no model) while its output is legitimately not repeatable. AI inference can be fully deterministic (greedy decoding, a fixed seed, a pinned local model) and the part is still <strong>tanya</strong>, because take the model away and it stops working. The axis is what a part needs in order to run, never how repeatable its output is.</p>
 
     <h2>What the three miss</h2>
     <div class="row"><div class="num">4</div><div class="rowbody">
@@ -139,7 +143,7 @@
     </div></div>
     <div class="row"><div class="num">6</div><div class="rowbody">
       <div class="rowhead"><span class="name">uji</span><span class="kind">tests</span></div>
-      <p class="detail">Tests and fixtures. They prove behavior but ship nothing, so they are neither pasti nor muatan.</p>
+      <p class="detail">Tests and fixtures. They prove behavior but ship nothing, so they are neither tegak nor muatan.</p>
     </div></div>
     <div class="row"><div class="num">7</div><div class="rowbody">
       <div class="rowhead"><span class="name">jauh</span><span class="kind">outside</span></div>
@@ -162,16 +166,16 @@
 
     <h2>Tried on Bedah itself</h2>
     <div class="row"><div class="rowbody">
-      <div class="rowhead"><span class="name">tools/gen_code.py, ast_ts.mjs, gen_sections.py, compare_extractors.py</span><span class="kind">pasti</span></div>
-      <p class="detail">The extractors: deterministic AST and line scans.</p>
+      <div class="rowhead"><span class="name">tools/gen_code.py, ast_ts.mjs, gen_sections.py, compare_extractors.py</span><span class="kind">tegak</span></div>
+      <p class="detail">The extractors: AST and line scans that need no model.</p>
     </div></div>
     <div class="row"><div class="rowbody">
-      <div class="rowhead"><span class="name">App.tsx, main.tsx, files-shim.tsx, build.sh</span><span class="kind">pasti</span></div>
+      <div class="rowhead"><span class="name">App.tsx, main.tsx, files-shim.tsx, build.sh</span><span class="kind">tegak</span></div>
       <p class="detail">Hand-written canvas and build logic.</p>
     </div></div>
     <div class="row"><div class="rowbody">
       <div class="rowhead"><span class="name">src/sections.ts, src/code.ts, src/codemap.ts</span><span class="kind">muatan</span></div>
-      <p class="detail">Static data generated by pasti at build time.</p>
+      <p class="detail">Static data generated by tegak at build time.</p>
     </div></div>
     <div class="row"><div class="rowbody">
       <div class="rowhead"><span class="name">index.html, styles, pages/*</span><span class="kind">muatan</span></div>
@@ -193,7 +197,7 @@
 
     <h2>One axis and one tag</h2>
     <p>Behavior decides the kind: what does the part need in order to run? Provenance is a separate question: who or what wrote it? Mixing the two is how every AI-assisted project ends up looking like it is all AI.</p>
-    <p>For build-time AI authorship, one tag: <strong>bekas</strong>, a trace. A file written by AI at build time but running with no model is pasti or muatan with a bekas mark. A part that asks a model at runtime is tanya whether a human or an AI typed it. Where authorship is not recorded, bekas is itself unverified and should be labeled that way.</p>
+    <p>For build-time AI authorship, one tag: <strong>bekas</strong>, a trace. A file written by AI at build time but running with no model is tegak or muatan with a bekas mark. A part that asks a model at runtime is tanya whether a human or an AI typed it. Where authorship is not recorded, bekas is itself unverified and should be labeled that way.</p>
 
     <h2>How it would sit in Bedah</h2>
     <ul>
