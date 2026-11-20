@@ -106,6 +106,7 @@ different corpus (the final worktree) and are not comparable to these.
 - [Two ways to build a code map](docs/research/code-map-and-doc-structure.md) - an account of the repo’s regex and syntax-tree extractors and a proposed way to structure docs.
 
 - [Diataxis, C4 and Endless Paper](docs/research/diataxis-c4-endless-paper.md) - reader needs, architecture scope and spatial navigation, with a source-grounded comparison and ideas clearly separated from current features.
+- [Otak, hitung, benda: parts by what they need](docs/research/naming-parts-by-what-they-need.md) - a proposed taxonomy for marking AI-dependent, algorithmic and static parts of a project, with gaps and overlaps examined; ideas, not features.
 
 ## Build and deploy
 
