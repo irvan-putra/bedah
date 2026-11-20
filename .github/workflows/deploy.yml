@@ -28,6 +28,7 @@ on:
       - 'files-shim.tsx'
       - 'territory.tsx'
       - 'src/**'
+      - 'pages/**'
       - 'tools/**'
       - 'build.sh'
       - 'package.json'

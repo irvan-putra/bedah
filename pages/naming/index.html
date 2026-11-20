@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tanya, pasti, muatan — naming a project's parts by what they need</title>
+<meta name="description" content="A proposal for marking which parts of a project depend on an AI model, which run plain deterministic code, and which are inert content. Revised names, gaps and overlaps examined. Ideas, not features.">
+<style>
+  :root {
+    --page: #f4efec;
+    --card: #fffdf9;
+    --ink: #2b2622;
+    --ink-2: #6f665c;
+    --hairline: #e5dcd2;
+    --tint: #f7f1e8;
+    --warn-bg: #fdf3e4;
+    --warn-edge: #e8c98f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 28px 22px;
+  }
+  @media (min-width: 640px) { .card { padding: 44px 44px; } }
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.9rem;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .fact { color: var(--ink-2); font-size: 0.85rem; margin: 0 0 18px; }
+  .intro { font-size: 1.05rem; margin: 0 0 24px; }
+  figure { margin: 0 0 8px; }
+  figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--hairline); display: block; }
+  figcaption { color: var(--ink-2); font-size: 0.85rem; margin-top: 8px; }
+  h2 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    margin: 36px 0 12px;
+    padding-top: 24px;
+    border-top: 1px solid var(--hairline);
+  }
+  p { margin: 0 0 14px; }
+  .key { font-size: 1.08rem; }
+  ul { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  .row { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--hairline); }
+  .row:first-of-type { border-top: none; }
+  .num {
+    flex: 0 0 26px; height: 26px; border-radius: 50%;
+    border: 1px solid var(--hairline); background: var(--tint);
+    color: var(--ink-2); font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .rowbody { min-width: 0; }
+  .rowhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+  .name { font-weight: 700; }
+  .kind {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-2); border: 1px solid var(--hairline); border-radius: 999px;
+    padding: 2px 8px; white-space: nowrap;
+  }
+  .detail { margin: 4px 0 0; color: var(--ink); font-size: 0.95rem; }
+  .callout {
+    background: var(--tint); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 14px 16px; margin: 16px 0 4px;
+  }
+  .callout.warn { background: var(--warn-bg); border-color: var(--warn-edge); }
+  .callout .ct { font-weight: 700; margin: 0 0 4px; font-size: 0.95rem; }
+  .callout p { margin: 0; font-size: 0.95rem; }
+  .closing { color: var(--ink-2); font-size: 0.85rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+  code { font-size: 0.9em; background: var(--tint); border-radius: 4px; padding: 1px 5px; }
+  a { color: #4a6b8a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>tanya, pasti, muatan</h1>
+    <p class="fact">A naming proposal for Bedah &middot; 20 Nov 2026 &middot; proposal, not a feature</p>
+    <p class="intro">How a review canvas could mark, for each part of a project, what that part needs in order to run: an AI model, plain deterministic code, or nothing at all. With names for the kinds, an honest check of where the split fails, and the gaps every repository actually has.</p>
+
+    <figure>
+      <img src="./parts-map.jpg" alt="Illustrative map of a city divided into districts" width="1536" height="1024">
+      <figcaption>Illustrative image, generated for this page. Bedah already draws a project as a fixed territory; the kinds below would be a new way to read it.</figcaption>
+    </figure>
+
+    <h2>The idea</h2>
+    <p class="key"><strong>Three kinds are a good start, but alone they are neither exhaustive nor separate.</strong></p>
+    <p>The three-way question a reader wants answered: how much of this project is the model, and how much stands on its own? The kinds overlap, one file can be static bytes and AI behavior at the same time, and they miss parts every repo has: config, docs, tests, and services that live outside the repo. The fix is not more guessing. Keep the three as the behavior of each part, add the missing kinds, and give the unknowns their own visible bucket.</p>
+    <p>One more split matters and it is not a kind: whether AI <em>wrote</em> a part at build time, or the part <em>calls</em> AI at runtime. That is a tag on the part, not a bucket of its own.</p>
+
+    <h2>The three kinds, named</h2>
+    <p>Short Indonesian words, matching this project's naming conventions. An earlier draft of this proposal named them <em>otak</em>, <em>hitung</em> and <em>benda</em>; those read as the human brain, as numeric calculation only, and as physical objects with no room for documents. The names below were chosen to say the meaning themselves. Alternatives are noted, and every name here stays a proposal.</p>
+
+    <div class="row"><div class="num">1</div><div class="rowbody">
+      <div class="rowhead"><span class="name">tanya</span><span class="kind">AI at runtime</span></div>
+      <p class="detail">The part <em>asks</em> a model while the app runs. No model, no answer. Model weights and prompt templates live here too: their bytes sit still, but their behavior comes from the model. Also considered: minta, pinjam.</p>
+    </div></div>
+    <div class="row"><div class="num">2</div><div class="rowbody">
+      <div class="rowhead"><span class="name">pasti</span><span class="kind">algorithm</span></div>
+      <p class="detail">Deterministic code, <em>certain</em>: same input, same output, no model involved. Parsers, schedulers, generators, comparators. Also considered: tetap, ajeg.</p>
+    </div></div>
+    <div class="row"><div class="num">3</div><div class="rowbody">
+      <div class="rowhead"><span class="name">muatan</span><span class="kind">static content</span></div>
+      <p class="detail">Inert content the project carries: markup, styles, icons, images, data files, and documents shipped as content, including data its own tools generate at build time. Also considered: konten, sajian, wujud.</p>
+    </div></div>
+
+    <h2>Where the three overlap</h2>
+    <ul>
+      <li>A model weights file is static bytes with AI behavior. Classify by behavior: tanya, with the file form noted.</li>
+      <li>A prompt template is plain text that means nothing without the model: tanya, not muatan.</li>
+      <li>Code an AI wrote at build time now runs deterministically: pasti, carrying the bekas tag below.</li>
+      <li>Generated data such as Bedah's own <code>src/codemap.ts</code> is muatan produced by pasti. Two kinds, one build step apart.</li>
+    </ul>
+
+    <h2>What the three miss</h2>
+    <div class="row"><div class="num">4</div><div class="rowbody">
+      <div class="rowhead"><span class="name">kait</span><span class="kind">wiring</span></div>
+      <p class="detail">Configuration that binds the parts: package manifests, lockfiles, CI workflows, ignore files. Not logic, not content, but the project breaks without it.</p>
+    </div></div>
+    <div class="row"><div class="num">5</div><div class="rowbody">
+      <div class="rowhead"><span class="name">kata</span><span class="kind">words</span></div>
+      <p class="detail">Prose for people: README, docs, comments. Bedah already treats these as structural only and unverified, which fits here.</p>
+    </div></div>
+    <div class="row"><div class="num">6</div><div class="rowbody">
+      <div class="rowhead"><span class="name">uji</span><span class="kind">tests</span></div>
+      <p class="detail">Tests and fixtures. They prove behavior but ship nothing, so they are neither pasti nor muatan.</p>
+    </div></div>
+    <div class="row"><div class="num">7</div><div class="rowbody">
+      <div class="rowhead"><span class="name">jauh</span><span class="kind">outside</span></div>
+      <p class="detail">Services the project calls but does not contain: a hosted model endpoint, a paid API. Invisible to a file scan, so the repo has to declare them.</p>
+    </div></div>
+    <div class="row"><div class="num">8</div><div class="rowbody">
+      <div class="rowhead"><span class="name">kabut</span><span class="kind">unknown</span></div>
+      <p class="detail">Anything the classifier cannot place: still <em>in the fog</em>. A first-class bucket, shown and never dropped, the way Bedah shows unassigned files today. Also considered: asing, gaib.</p>
+    </div></div>
+
+    <div class="callout">
+      <p class="ct">Where documents live</p>
+      <p>Documents are not homeless in this split. Prose written for people, a README, design notes, research like this page, is kata. A document the project ships as content, a PDF guide an app displays, is muatan. The earlier name benda, a physical thing, hid both; muatan, what a project carries, holds the second without swallowing the first.</p>
+    </div>
+
+    <div class="callout">
+      <p class="ct">Why kabut matters most</p>
+      <p>A review tool that silently forces every file into a bucket hides its own uncertainty. Bedah already shows unassigned files rather than dropping them; kabut extends that honesty to kinds.</p>
+    </div>
+
+    <h2>Tried on Bedah itself</h2>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">tools/gen_code.py, ast_ts.mjs, gen_sections.py, compare_extractors.py</span><span class="kind">pasti</span></div>
+      <p class="detail">The extractors: deterministic AST and line scans.</p>
+    </div></div>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">App.tsx, main.tsx, files-shim.tsx, build.sh</span><span class="kind">pasti</span></div>
+      <p class="detail">Hand-written canvas and build logic.</p>
+    </div></div>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">src/sections.ts, src/code.ts, src/codemap.ts</span><span class="kind">muatan</span></div>
+      <p class="detail">Static data generated by pasti at build time.</p>
+    </div></div>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">index.html, styles, pages/*</span><span class="kind">muatan</span></div>
+      <p class="detail">The static shell and static pages like this one.</p>
+    </div></div>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">package.json, lockfile, deploy.yml, .gitignore</span><span class="kind">kait</span></div>
+      <p class="detail">Wiring: dependencies and the deploy pipeline.</p>
+    </div></div>
+    <div class="row"><div class="rowbody">
+      <div class="rowhead"><span class="name">README.md, docs/research/*</span><span class="kind">kata</span></div>
+      <p class="detail">Words for readers, including the written-up version of this idea.</p>
+    </div></div>
+
+    <div class="callout">
+      <p class="ct">No tanya in Bedah today</p>
+      <p>The whole canvas runs without a model, and uji is empty too: the extractors are checked with a comparison tool and an unpublished fixture, per the README. A kinds view would show both absences, which is itself useful evidence.</p>
+    </div>
+
+    <h2>One axis and one tag</h2>
+    <p>Behavior decides the kind: what does the part need in order to run? Provenance is a separate question: who or what wrote it? Mixing the two is how every AI-assisted project ends up looking like it is all AI.</p>
+    <p>For build-time AI authorship, one tag: <strong>bekas</strong>, a trace. A file written by AI at build time but running with no model is pasti or muatan with a bekas mark. A part that asks a model at runtime is tanya whether a human or an AI typed it. Where authorship is not recorded, bekas is itself unverified and should be labeled that way.</p>
+
+    <h2>How it would sit in Bedah</h2>
+    <ul>
+      <li>A tint or badge on each existing room and declaration; the territory itself does not move, keeping the map-and-territory rule.</li>
+      <li>The legend and the kabut list live in the Menu, beside the unassigned files.</li>
+      <li>Every mark carries its evidence: a model import or endpoint seen by the extractor, a declaration by hand, or unverified, matching the honesty labels Bedah uses now.</li>
+      <li>The classification itself stays deterministic, run by the same AST and name scans Bedah already has, not by asking a model to judge the repo.</li>
+    </ul>
+    <div class="callout warn">
+      <p class="ct">Proposal only</p>
+      <p>Nothing here is built or changed in the canvas. This page and the research note in <code>docs/research</code> are the whole of it; names and kinds are open for revision.</p>
+    </div>
+
+    <h2>Related public work</h2>
+    <p>Two public efforts record that a model is present in an inventory. Neither tries to draw which parts of one project are model-dependent, which is the gap this idea addresses. This note has not surveyed academic work on software decomposition; other taxonomies may exist there.</p>
+    <p><a href="https://spdx.github.io/spdx-spec/v3.0.1/model/AI/Classes/AIPackage/">SPDX 3.0 AI package profile</a>, for recording models in a software bill of materials.<br>
+    <a href="https://cyclonedx.org/capabilities/mlbom/">CycloneDX ML-BOM</a>, for model and dataset inventory in security review.</p>
+
+    <p class="closing">Checked against the bedah repo README and file tree on 20 Nov 2026. A proposal, not a built feature. Source: <a href="https://github.com/irvan-putra/bedah">github.com/irvan-putra/bedah</a>.</p>
+  </div>
+</div>
+</body>
+</html>

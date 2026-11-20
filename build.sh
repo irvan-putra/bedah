@@ -19,6 +19,10 @@ if [ ! -d node_modules ]; then
 fi
 ./node_modules/.bin/esbuild main.tsx --bundle --outfile="$OUT/app.js" --jsx=automatic --minify
 cp index.html "$OUT/index.html"
+# Static subpages (e.g. pages/naming/) ship verbatim alongside the canvas.
+if [ -d pages ]; then
+  cp -r pages/. "$OUT/"
+fi
 # Content-fingerprint the JS/CSS asset names and rewrite index.html to match,
 # so a new release is picked up immediately instead of waiting out the
 # browser cache (GitHub Pages serves these with max-age=600).
