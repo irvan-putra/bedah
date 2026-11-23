@@ -3,8 +3,8 @@
 A full-screen review canvas that reviews its own repository. The cards,
 diagrams and code facts on the page describe this repo's source at the
 pinned commit, so the page is both the review surface and the thing under
-review. Extracted from the intodo review canvas, which keeps its own
-unchanged page at <https://vanipy.com/intodo/review/>.
+review. Extracted from the intodo (now tindak) review canvas, which keeps its own
+unchanged page at <https://vanipy.com/tindak/review/>.
 
 Live at <https://vanipy.com/bedah/>.
 
@@ -123,7 +123,7 @@ pushed.
 
 ## Not in this repo
 
-- The intodo applications (Android app, DeltaChat mini-app, feed tools, the
-  native Android canvas view) stay in
-  [irvan-putra/intodo](https://github.com/irvan-putra/intodo). This repo
+- The tindak applications (formerly intodo: Android app, DeltaChat mini-app,
+  feed tools, the native Android canvas view) stay in
+  [irvan-putra/tindak](https://github.com/irvan-putra/tindak). This repo
   holds only the canvas, its generated content, and its publish pipeline.

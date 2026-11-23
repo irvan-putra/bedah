@@ -2047,7 +2047,7 @@ function Canvas() {
                 </div>
                 <span className="rc-menu-head">About / history</span>
                 <div className="rc-menu-detail">
-                    <p>This canvas was extracted once from the intodo review canvas on Nov 14, 2026 - extraction commit <a href="https://github.com/irvan-putra/bedah/commit/a40a5e6c7891c6fe43b4a80d95a4e2a3a0d802f7" target="_blank" rel="noreferrer">a40a5e6</a>, with the copied content pinned at intodo fbd0213 (sections) and 1f6ba2f (component/code layers). The extraction was a copy, not a move: the original page kept serving, unaltered by it, at <a href="https://vanipy.com/intodo/review/" target="_blank" rel="noreferrer">vanipy.com/intodo/review</a>, and the original's source had no later commits as of Nov 15, 2026.</p>
+                    <p>This canvas was extracted once from the intodo review canvas on Nov 14, 2026 - extraction commit <a href="https://github.com/irvan-putra/bedah/commit/a40a5e6c7891c6fe43b4a80d95a4e2a3a0d802f7" target="_blank" rel="noreferrer">a40a5e6</a>, with the copied content pinned at intodo fbd0213 (sections) and 1f6ba2f (component/code layers). The extraction was a copy, not a move: the original page kept serving, unaltered by it, at <a href="https://vanipy.com/tindak/review/" target="_blank" rel="noreferrer">vanipy.com/tindak/review</a> (then vanipy.com/intodo/review), and the original's source had no later commits as of Nov 15, 2026.</p>
                     <p>That relationship used to be drawn as a dashed edge on the system map. It is one-time history, not a live link - nothing on this page fetches from intodo - so it is documented here while the map shows only the current system.</p>
                 </div>
 
