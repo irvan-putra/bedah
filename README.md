@@ -127,3 +127,7 @@ pushed.
   feed tools, the native Android canvas view) stay in
   [irvan-putra/tindak](https://github.com/irvan-putra/tindak). This repo
   holds only the canvas, its generated content, and its publish pipeline.
+
+---
+
+Built with AI assistance (Instinct and others). Not everything has been reviewed by Irvan.
