@@ -79,7 +79,7 @@ Edge kinds, none of them a proven runtime call: `imports`, `calls-resolved`,
 the compiler or Python scope rules), `generated-by` (a generated file's own
 header), `run-step`, `path-trigger`, `path-mention` (text evidence). Calls
 through callbacks, dynamic imports or untyped values are not seen. The
-component grouping and the one-line responsibilities are hand-written.
+component grouping and the one-line responsibilities are written directly in source.
 `python3 tools/gen_code.py --map-mode regex` runs the earlier line scan, kept
 only for comparison: `tools/compare_extractors.py` classifies the differences
 against the source (the regex scan gave `snapEnds` a span of about 450 lines
